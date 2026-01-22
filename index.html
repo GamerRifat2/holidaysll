@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Generator - Holiday Travels</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .arabic-text {
+            font-family: 'Cairo', sans-serif;
+            direction: rtl;
+        }
+        .invoice-paper {
+            max-width: 210mm;
+            min-height: 297mm;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Editable Fields */
+        .editable {
+            transition: all 0.2s;
+            border-bottom: 1px dashed transparent;
+            min-width: 20px;
+            display: inline-block;
+        }
+        .editable:hover, .editable:focus {
+            background-color: #f0fdf4;
+            border-bottom: 1px dashed #22c55e;
+            outline: none;
+            border-radius: 2px;
+        }
+        .editable:empty:before {
+            content: attr(data-placeholder);
+            color: #9ca3af;
+        }
+
+        /* Paid Stamp */
+        .paid-seal {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            border: 0.5rem solid #22c55e;
+            border-radius: 1rem;
+            padding: 1rem 3rem;
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+            mix-blend-mode: multiply;
+            color: #22c55e;
+        }
+        .paid-seal.is-visible {
+            opacity: 0.25;
+        }
+
+        /* Delete Button */
+        .delete-row {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .item-row:hover .delete-row {
+            opacity: 1;
+        }
+
+        /* Print Settings */
+        @media print {
+            @page { 
+                margin: 0; 
+                size: A4; 
+            }
+            body { 
+                background: white; 
+                margin: 0; 
+                padding: 0; 
+            }
+            .invoice-paper {
+                box-shadow: none;
+                margin: 0;
+                width: 100%;
+                max-width: 210mm;
+                padding: 10mm;
+                min-height: auto; /* Allow flexible height */
+                height: auto;
+            }
+            .controls, #add-item-btn, .delete-row, .no-print, #login-screen { display: none !important; }
+            .bg-gray-100 { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact; }
+            .bg-gray-800 { background-color: #1f2937 !important; color: white !important; -webkit-print-color-adjust: exact; }
+            .text-white { color: white !important; }
+            .editable { border-bottom: none !important; background: transparent !important; }
+            
+            /* --- FORCE DESKTOP LAYOUT IN PRINT --- */
+            /* Force Header Row */
+            header {
+                flex-direction: row !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+            header > div {
+                width: 33.33% !important;
+            }
+            header > div:first-child { text-align: left !important; }
+            header > div:last-child { text-align: right !important; }
+            
+            /* Force Grid for Bill To */
+            .grid {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+            }
+            .md\:text-right {
+                text-align: right !important;
+            }
+
+            /* Force Footer Row */
+            footer > div {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: flex-end !important;
+            }
+            footer .mt-4 {
+                margin-top: 0 !important;
+            }
+
+            /* Force Fonts */
+            * {
+                font-family: 'Inter', sans-serif !important;
+            }
+            .arabic-text, .arabic-text * {
+                font-family: 'Cairo', sans-serif !important;
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- PASSWORD PROTECTION SCREEN -->
+    <div id="login-screen" class="fixed inset-0 bg-gray-100 z-[9999] flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center border border-gray-200">
+            <div class="mb-6 flex justify-center">
+                <div class="bg-blue-100 p-3 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold mb-2 text-gray-800">Login Required</h2>
+            <p class="text-gray-500 mb-6 text-sm">Please enter the passcode to access the invoice generator.</p>
+            
+            <input type="password" id="password-input" placeholder="Enter Passcode" class="w-full p-3 border border-gray-200 rounded-lg mb-4 text-center text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+            
+            <button onclick="attemptLogin()" class="w-full bg-gray-900 text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition-all transform active:scale-95 shadow-lg">
+                Login
+            </button>
+            <p id="login-error" class="text-red-500 text-sm mt-4 hidden font-medium flex items-center justify-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                Incorrect Code
+            </p>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls max-w-[210mm] mx-auto mt-6 px-4 mb-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 justify-between items-center">
+            
+            <!-- Search -->
+            <div class="flex items-center gap-2 flex-grow max-w-md">
+                <input type="number" id="search-input" placeholder="Search No / بحث برقم" class="flex-grow p-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:outline-none text-sm">
+                <button onclick="searchInvoice()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">Search</button>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-2">
+                <button onclick="generateNewInvoice()" class="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-200 font-bold border border-gray-300">
+                    <i data-lucide="plus" class="w-4 h-4"></i> New
+                </button>
+                <button onclick="saveInvoice()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-bold shadow-sm">
+                    <i data-lucide="save" class="w-4 h-4"></i> Save
+                </button>
+                <button onclick="window.print()" class="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 font-bold shadow-sm">
+                    <i data-lucide="printer" class="w-4 h-4"></i> Print
+                </button>
+            </div>
+        </div>
+
+        <div class="mt-2 flex justify-between items-center text-xs text-gray-500 px-2">
+            <span id="system-message" class="font-medium">Ready</span>
+            <div class="flex items-center gap-2">
+                <label class="flex items-center gap-2 cursor-pointer hover:text-green-600 font-bold">
+                    <input type="checkbox" id="paid-toggle" class="rounded text-green-600 focus:ring-green-500">
+                    <span>Mark as PAID / مدفوع</span>
+                </label>
+                <span class="text-gray-300">|</span>
+                <button onclick="backupData()" class="hover:underline">Backup</button>
+                <label class="cursor-pointer hover:underline">
+                    Restore <input type="file" class="hidden" onchange="restoreData(this)" accept=".json">
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Paper -->
+    <div class="invoice-paper" id="invoice">
+        
+        <!-- Paid Seal -->
+        <div id="paid-watermark" class="paid-seal">
+            <div class="text-5xl font-bold uppercase">PAID</div>
+            <div class="text-3xl font-bold arabic-text mt-2">مدفوع</div>
+        </div>
+
+        <!-- Header (3 Columns: English - Logo - Arabic) -->
+        <header class="flex flex-col md:flex-row justify-between items-center pb-6 border-b relative z-10 gap-4">
+            
+            <!-- Left: English -->
+            <div class="text-center md:text-left w-full md:w-1/3 pt-2">
+                <h1 class="font-bold text-gray-800 text-lg uppercase leading-tight mb-1">HOLIDAY TRAVELS</h1>
+                <p class="text-xs text-gray-600">NEAR PAK MOSJID SALALAH</p>
+                <p class="text-xs text-gray-600">Salalah, Sultanate of Oman</p>
+                <p class="text-xs text-gray-600 mt-1"><strong>Phone:</strong> 78594007</p>
+                <p class="text-xs text-gray-600"><strong>Email:</strong> HOLIDAYTRAVELS.OM@GMAIL.COM</p>
+            </div>
+
+            <!-- Center: Logo -->
+            <div class="text-center w-full md:w-1/3 flex justify-center">
+                <img src="LOGO.jpg" 
+                     onerror="this.style.display='none'"
+                     alt="Logo" 
+                     class="h-28 w-auto object-contain mx-auto">
+            </div>
+
+            <!-- Right: Arabic -->
+            <div class="text-center md:text-right w-full md:w-1/3 pt-2 arabic-text">
+                <h1 contenteditable="true" class="editable font-bold text-gray-800 text-xl leading-tight mb-1">سفريات هوليداي</h1>
+                <p contenteditable="true" class="editable text-sm text-gray-600">بالقرب من المسجد الباكستاني</p>
+                <p contenteditable="true" class="editable text-sm text-gray-600">صلالة، سلطنة عمان</p>
+                <p class="text-sm text-gray-600 mt-1"><strong class="mx-1">هاتف:</strong><span class="font-sans" contenteditable="true">78594007</span></p>
+                <p class="text-sm text-gray-600"><strong class="mx-1">بريد إلكتروني:</strong><span class="font-sans text-xs" contenteditable="true">HOLIDAYTRAVELS.OM@GMAIL.COM</span></p>
+            </div>
+        </header>
+
+        <!-- Invoice Title & Meta Row -->
+        <div class="flex justify-between items-center mt-6 mb-6">
+            <div class="text-left">
+                <div class="flex flex-col">
+                    <span class="text-gray-500 text-xs font-bold uppercase">Invoice No / رقم الفاتورة</span>
+                    <span id="invoice-number" class="text-xl font-bold text-gray-800 font-mono">9877</span>
+                </div>
+            </div>
+            <div class="text-center">
+                <h2 class="text-3xl font-bold uppercase text-gray-800 tracking-wide">INVOICE <span class="arabic-text font-normal text-2xl">فاتورة</span></h2>
+            </div>
+            <div class="text-right">
+                <div class="flex flex-col">
+                     <span class="text-gray-500 text-xs font-bold uppercase">Date / التاريخ</span>
+                    <span id="invoice-date" contenteditable="true" class="editable text-xl font-bold text-gray-800"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Billed To -->
+        <section class="mb-8 bg-gray-50 rounded-lg p-4 border border-gray-100">
+            <div class="flex justify-between items-end mb-2">
+                <h3 class="text-xs font-bold uppercase text-gray-500 tracking-wider">Billed To</h3>
+                <h3 class="text-sm font-bold text-gray-500 arabic-text">فاتورة إلى</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                     <label class="block text-xs text-gray-400">Customer Name / اسم العميل</label>
+                    <div contenteditable="true" id="customer-name" class="editable text-lg font-bold text-gray-800 w-full p-1" data-placeholder="Name">Customer Name</div>
+                </div>
+                <div class="md:text-right">
+                    <label class="block text-xs text-gray-400">Phone / رقم الهاتف</label>
+                    <div contenteditable="true" id="customer-phone" class="editable text-gray-600 w-full p-1 font-sans" data-placeholder="Phone">Phone Number</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Table -->
+        <section class="flex-grow">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-gray-800 text-white">
+                        <th class="p-3 text-sm font-semibold uppercase tracking-wider w-3/4 rounded-tl-lg rounded-bl-lg">
+                            <div class="flex justify-between">
+                                <span>Item Description</span>
+                                <span class="arabic-text font-normal">تفاصيل</span>
+                            </div>
+                        </th>
+                        <th class="p-3 text-right text-sm font-semibold uppercase tracking-wider w-1/4 rounded-tr-lg rounded-br-lg">
+                            <div class="flex flex-col items-end">
+                                <span>Amount (OMR)</span>
+                                <span class="arabic-text text-xs text-gray-300">المبلغ (ر.ع)</span>
+                            </div>
+                        </th>
+                        <th class="w-10 no-print bg-white"></th>
+                    </tr>
+                </thead>
+                <tbody id="items-table-body">
+                    <!-- Rows -->
+                </tbody>
+            </table>
+            <button id="add-item-btn" onclick="addRow()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> Add Item / إضافة
+            </button>
+        </section>
+
+        <!-- Totals -->
+        <section class="mt-8 flex justify-end">
+            <div class="w-72">
+                <div class="flex justify-between items-center py-2 border-b border-gray-200">
+                    <span class="text-gray-600 font-medium text-sm">Subtotal / <span class="arabic-text">المجموع الفرعي</span></span>
+                    <span class="font-bold text-gray-800"><span id="subtotal">0.000</span></span>
+                </div>
+                <div class="flex justify-between items-center py-3 bg-gray-100 px-4 rounded-lg mt-3 border border-gray-200">
+                    <span class="text-lg font-bold text-gray-800">Total / <span class="arabic-text">الإجمالي</span></span>
+                    <span class="text-xl font-bold text-blue-900"><span id="total">0.000</span> <span class="text-sm text-gray-500">OMR</span></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="mt-12 pt-6 border-t border-gray-200 text-gray-500 text-sm">
+            <div class="flex flex-col md:flex-row justify-between items-end">
+                
+                <!-- Company Legal Details -->
+                 <div class="text-left space-y-1">
+                    <p class="text-xs uppercase font-bold text-gray-800">Company Reg Details / بيانات السجل التجاري</p>
+                    <p class="font-bold text-gray-700">Sajer Desert Rare Trading Company</p>
+                    <p class="font-bold text-gray-700 arabic-text">شركة صحراء ساجر للتجارة النادرة</p>
+                    <p>
+                        <strong class="text-xs">CR No / رقم السجل:</strong> <span class="font-mono">1588173</span>
+                    </p>
+                 </div>
+
+                 <!-- WhatsApp Image -->
+                 <div class="mt-4 md:mt-0 flex flex-col items-center">
+                    <img src="WHATSAPP.jpg" 
+                        onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1200px-WhatsApp.svg.png'"
+                        alt="WhatsApp" class="w-16 h-16 object-contain mb-1">
+                    <p class="text-xs font-bold text-green-600">Contact Support</p>
+                 </div>
+            </div>
+            
+            <p class="mt-8 italic text-center text-[10px] text-gray-400">
+                This invoice is electronically generated / هذه الفاتورة صادرة إلكترونياً
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const STORAGE_PREFIX = 'holiday_inv_';
+        const STORAGE_KEY_COUNTER = 'holidayTravelsInvoiceNum';
+        
+        // --- Icons ---
+        lucide.createIcons();
+
+        // --- AUTHENTICATION LOGIC ---
+        const CORRECT_PASS = "96419161";
+        const loginScreen = document.getElementById('login-screen');
+        const passInput = document.getElementById('password-input');
+        const loginError = document.getElementById('login-error');
+
+        // Check if previously logged in this session
+        if (sessionStorage.getItem('invoice_authorized') === 'true') {
+            loginScreen.style.display = 'none';
+        }
+
+        function attemptLogin() {
+            if (passInput.value === CORRECT_PASS) {
+                sessionStorage.setItem('invoice_authorized', 'true');
+                loginScreen.style.opacity = '0';
+                loginScreen.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => {
+                    loginScreen.style.display = 'none';
+                }, 500);
+            } else {
+                loginError.classList.remove('hidden');
+                passInput.value = '';
+                passInput.focus();
+                passInput.classList.add('border-red-500');
+            }
+        }
+
+        // Enter key support for login
+        passInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                attemptLogin();
+            }
+        });
+
+        // Focus on load
+        passInput.focus();
+
+        // --- Auto-Clear Logic for Customer Fields ---
+        function setupAutoClear(elementId, defaultText) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+
+            el.addEventListener('focus', function() {
+                if (this.innerText.trim() === defaultText) {
+                    this.innerText = '';
+                }
+            });
+
+            el.addEventListener('blur', function() {
+                if (this.innerText.trim() === '') {
+                    this.innerText = defaultText;
+                }
+            });
+        }
+
+        // Initialize auto-clear for customer fields
+        setupAutoClear('customer-name', 'Customer Name');
+        setupAutoClear('customer-phone', 'Phone Number');
+
+        // --- 1. Invoice Number Logic ---
+        const invoiceNumberElement = document.getElementById('invoice-number');
+
+        function setInvoiceNumberDisplay(num) {
+            invoiceNumberElement.textContent = String(num).padStart(4, '0');
+        }
+        
+        function initializeInvoiceNumber() {
+            let lastNum = localStorage.getItem(STORAGE_KEY_COUNTER);
+            if (!lastNum) {
+                lastNum = 9876;
+                localStorage.setItem(STORAGE_KEY_COUNTER, lastNum);
+            }
+            let nextNum = parseInt(lastNum, 10) + 1;
+            setInvoiceNumberDisplay(nextNum);
+        }
+
+        // --- 2. Date Logic ---
+        function setTodayDate() {
+            const today = new Date();
+            const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+            document.getElementById('invoice-date').textContent = formattedDate;
+        }
+
+        // --- 3. Calculation Logic ---
+        const itemsTableBody = document.getElementById('items-table-body');
+
+        const calculateTotal = () => {
+            let subtotal = 0;
+            document.querySelectorAll('.item-amount').forEach(el => {
+                const val = parseFloat(el.innerText.replace(/[^0-9.-]+/g,"")) || 0;
+                subtotal += val;
+            });
+
+            document.getElementById('subtotal').textContent = subtotal.toFixed(3);
+            document.getElementById('total').textContent = subtotal.toFixed(3);
+        };
+
+        // --- 4. Table Interactions ---
+        window.addRow = (desc = "DHAKA TO SALALAH", price = "0.000") => {
+            const newRow = document.createElement('tr');
+            newRow.className = 'item-row border-b border-gray-100 hover:bg-gray-50';
+            newRow.innerHTML = `
+                <td class="p-3 align-top">
+                    <div class="flex flex-col gap-1">
+                        <span contenteditable="true" class="item-desc editable w-full block font-medium text-gray-800" data-placeholder="Description">${desc}</span>
+                    </div>
+                </td>
+                <td class="p-3 align-top text-right">
+                    <span contenteditable="true" class="item-amount editable w-full block text-right font-mono text-lg text-gray-700">${price}</span>
+                </td>
+                <td class="p-3 text-center no-print align-middle">
+                    <button onclick="deleteRow(this)" class="delete-row text-red-400 hover:text-red-600 font-bold p-1 rounded hover:bg-red-50">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </td>
+            `;
+            itemsTableBody.appendChild(newRow);
+            lucide.createIcons();
+            
+            // Add listeners
+            const amountCell = newRow.querySelector('.item-amount');
+            const descCell = newRow.querySelector('.item-desc');
+            
+            [amountCell, descCell].forEach(cell => {
+                cell.addEventListener('input', calculateTotal);
+            });
+
+            amountCell.addEventListener('blur', (e) => {
+                const val = parseFloat(e.target.innerText.replace(/[^0-9.-]+/g,"")) || 0;
+                e.target.innerText = val.toFixed(3);
+                calculateTotal();
+            });
+
+            // Auto-clear logic for placeholders
+            descCell.addEventListener('focus', function() {
+                if (this.innerText.includes("DHAKA TO SALALAH")) this.innerText = "";
+            });
+
+            calculateTotal();
+        };
+        
+        window.deleteRow = (btn) => {
+            btn.closest('tr').remove();
+            calculateTotal();
+        };
+
+        // --- 5. Save/Load/New Logic ---
+        function showMessage(text, type = 'success') {
+            const msg = document.getElementById('system-message');
+            msg.textContent = text;
+            msg.className = type === 'error' ? 'text-red-500 font-bold' : 'text-blue-600 font-bold';
+            setTimeout(() => {
+                msg.textContent = 'Ready';
+                msg.className = 'font-medium';
+            }, 3000);
+        }
+
+        function saveInvoice() {
+            const id = parseInt(invoiceNumberElement.textContent, 10);
+            
+            // Get Items
+            const items = [];
+            document.querySelectorAll('.item-row').forEach(row => {
+                items.push({
+                    desc: row.querySelector('.item-desc').innerText,
+                    amount: row.querySelector('.item-amount').innerText
+                });
+            });
+
+            const data = {
+                id: id,
+                date: document.getElementById('invoice-date').innerText,
+                customerName: document.getElementById('customer-name').innerText,
+                customerPhone: document.getElementById('customer-phone').innerText,
+                items: items,
+                paid: document.getElementById('paid-toggle').checked
+            };
+
+            localStorage.setItem(STORAGE_PREFIX + id, JSON.stringify(data));
+            
+            // Update counter if this is a new high number
+            let currentHigh = parseInt(localStorage.getItem(STORAGE_KEY_COUNTER) || 0, 10);
+            if (id > currentHigh) {
+                localStorage.setItem(STORAGE_KEY_COUNTER, id);
+            }
+
+            showMessage(`Invoice #${id} Saved Successfully!`);
+        }
+
+        function searchInvoice() {
+            const term = document.getElementById('search-input').value;
+            if (!term) return showMessage('Enter a number / أدخل رقم', 'error');
+
+            const dataStr = localStorage.getItem(STORAGE_PREFIX + parseInt(term, 10));
+            if (!dataStr) return showMessage('Invoice Not Found / غير موجود', 'error');
+
+            const data = JSON.parse(dataStr);
+            
+            // Populate
+            setInvoiceNumberDisplay(data.id);
+            document.getElementById('invoice-date').innerText = data.date;
+            document.getElementById('customer-name').innerText = data.customerName;
+            document.getElementById('customer-phone').innerText = data.customerPhone;
+            document.getElementById('paid-toggle').checked = data.paid;
+            togglePaidStamp();
+
+            // Items
+            itemsTableBody.innerHTML = '';
+            data.items.forEach(item => addRow(item.desc, item.amount));
+            
+            showMessage(`Invoice #${term} Loaded`);
+        }
+
+        function generateNewInvoice() {
+            let lastNum = localStorage.getItem(STORAGE_KEY_COUNTER) || 9876;
+            let nextNum = parseInt(lastNum, 10) + 1;
+            
+            setInvoiceNumberDisplay(nextNum);
+            setTodayDate();
+            
+            // Reset fields
+            document.getElementById('customer-name').innerText = "Customer Name";
+            document.getElementById('customer-phone').innerText = "Phone Number";
+            document.getElementById('paid-toggle').checked = false;
+            togglePaidStamp();
+            document.getElementById('search-input').value = '';
+
+            // Reset table
+            itemsTableBody.innerHTML = '';
+            addRow("DHAKA TO SALALAH", "0.000");
+            
+            showMessage('New Invoice Created');
+        }
+
+        // --- 6. Paid Stamp Toggle ---
+        function togglePaidStamp() {
+            const isPaid = document.getElementById('paid-toggle').checked;
+            const stamp = document.getElementById('paid-watermark');
+            if (isPaid) stamp.classList.add('is-visible');
+            else stamp.classList.remove('is-visible');
+        }
+
+        document.getElementById('paid-toggle').addEventListener('change', togglePaidStamp);
+
+        // --- 7. Backup/Restore ---
+        window.backupData = () => {
+            const data = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith(STORAGE_PREFIX) || key === STORAGE_KEY_COUNTER) {
+                    data[key] = localStorage.getItem(key);
+                }
+            }
+            const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `HolidayTravels_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        };
+
+        window.restoreData = (input) => {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
+                    showMessage('Data Restored Successfully!');
+                    setTimeout(() => location.reload(), 1000);
+                } catch(e) { showMessage('Invalid File', 'error'); }
+            };
+            reader.readAsText(file);
+        };
+
+        // --- Init ---
+        setTodayDate();
+        initializeInvoiceNumber();
+        if(itemsTableBody.children.length === 0) addRow();
+
+    </script>
+</body>
+</html>
