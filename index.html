@@ -90,14 +90,14 @@
 
         /* Print Settings */
         @media print {
-            @page { margin: 0; size: A4 landscape; } 
+            @page { margin: 1cm; size: A4 portrait; } 
             body { background: white !important; color: black !important; margin: 0; padding: 0; }
             .no-print, .controls, #login-screen, .tabs-nav, #global-header, .add-row-btn { display: none !important; }
             
             .tab-content { display: none !important; }
             .tab-content.active { display: block !important; }
 
-            .invoice-paper { box-shadow: none; margin: 0; width: 100%; max-width: 100%; padding: 5mm; min-height: auto; height: auto; }
+            .invoice-paper { box-shadow: none; margin: 0; width: 100%; max-width: 100%; padding: 0; min-height: auto; height: auto; }
             
             #tab-invoice.active header { flex-direction: row !important; display: flex !important; }
             #tab-invoice.active header > div { width: 33.33% !important; }
@@ -108,17 +108,26 @@
             #tab-notes.active { width: 100%; }
             
             /* Due Tab Print Styling (Statement Look) */
-            #tab-due.active .print-header { display: flex !important; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px; margin-bottom: 20px; }
-            #tab-due.active .print-header img { height: 80px; }
+            #tab-due.active .print-header { display: flex !important; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
+            #tab-due.active .print-header img { height: 60px; }
             #tab-due.active .print-header .company-details { text-align: right; }
-            #tab-due.active .grid { display: block !important; } /* Un-grid the stats */
-            #tab-due.active .grid > div { margin-bottom: 15px; border: 1px solid #ddd; page-break-inside: avoid; } /* Stack stats */
-            #tab-due.active .grid-cols-1 { display: block !important; } /* Un-grid the main content */
-            #tab-due.active #due-active-view > div { margin-bottom: 30px; page-break-inside: avoid; } /* Stack tables */
+            
+            /* Stack stats nicely */
+            #tab-due.active .grid { display: grid !important; grid-template-columns: 1fr 1fr 1fr 1fr !important; gap: 10px; margin-bottom: 20px; } 
+            #tab-due.active .grid > div { border: 1px solid #000; page-break-inside: avoid; background: #fff !important; } 
+            
+            /* Main content vertical flow */
+            #tab-due.active #due-active-view { display: block !important; }
+            #tab-due.active #due-active-view > div { margin-bottom: 30px; page-break-inside: avoid; } 
             
             /* Clean up table for statement */
-            .excel-table th, .excel-table td { border: 1px solid #000 !important; font-size: 10px; color: black !important; background: white !important; } 
+            .excel-table { width: 100%; border: 1px solid #000; }
+            .excel-table th { background-color: #eee !important; color: #000 !important; font-weight: bold; border: 1px solid #000 !important; }
+            .excel-table td { border: 1px solid #000 !important; font-size: 10px; color: black !important; background: white !important; } 
             
+            /* Hide inputs borders in print for cleaner look */
+            .excel-table input, .excel-table select { border: none !important; padding: 0 !important; background: transparent !important; width: auto !important; }
+
             #tab-dashboard.active .chart-container { page-break-inside: avoid; }
             
             .paid-seal.is-visible { display: block !important; }
@@ -452,7 +461,7 @@
                                     <th style="width: 20%">Amount</th>
                                     <th style="width: 20%">Promise Date (Opt)</th>
                                     <th style="width: 15%">Status</th>
-                                    <th style="width: 5%"></th>
+                                    <th class="no-print" style="width: 5%"></th>
                                 </tr>
                             </thead>
                             <tbody id="due-table-customer"></tbody>
@@ -462,7 +471,7 @@
                     <div>
                         <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="arrow-up-right" class="text-red-500 w-4 h-4"></i> My Payables (Pending)</h3>
                         <table class="excel-table w-full">
-                            <thead><tr><th style="width: 30%">Pay To (Name)</th><th style="width: 20%">Amount</th><th style="width: 20%">Pay Date</th><th style="width: 20%">Status</th><th style="width: 10%"></th></tr></thead>
+                            <thead><tr><th style="width: 30%">Pay To (Name)</th><th style="width: 20%">Amount</th><th style="width: 20%">Pay Date</th><th style="width: 20%">Status</th><th class="no-print" style="width: 10%"></th></tr></thead>
                             <tbody id="due-table-payable"></tbody>
                         </table>
                         <button onclick="addDueRow('payable')" class="add-row-btn w-full mt-2 bg-red-100 text-red-700 text-xs font-bold py-2 rounded hover:bg-red-200 dashed-border border-red-300 border-2 border-dashed">+ Add Payable</button>
@@ -470,7 +479,7 @@
                     <div>
                         <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="landmark" class="text-green-600 w-4 h-4"></i> Recent Bank Deposits</h3>
                         <table class="excel-table w-full">
-                            <thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Name / Details</th><th style="width: 30%">Amount</th><th style="width: 10%"></th></tr></thead>
+                            <thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Name / Details</th><th style="width: 30%">Amount</th><th class="no-print" style="width: 10%"></th></tr></thead>
                             <tbody id="due-table-bank"></tbody>
                         </table>
                         <button onclick="addDueRow('bank')" class="add-row-btn w-full mt-2 bg-green-100 text-green-700 text-xs font-bold py-2 rounded hover:bg-green-200 dashed-border border-green-300 border-2 border-dashed">+ Add Bank Deposit</button>
@@ -490,7 +499,7 @@
                                     <th style="width: 15%">Promise Date</th>
                                     <th style="width: 15%">Paid Date</th>
                                     <th style="width: 10%">Status</th>
-                                    <th style="width: 10%"></th>
+                                    <th class="no-print" style="width: 10%"></th>
                                 </tr>
                             </thead>
                             <tbody id="due-table-history"></tbody>
@@ -501,7 +510,7 @@
                     <div>
                          <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="landmark" class="text-green-600 w-4 h-4"></i> All Bank Deposits History</h3>
                          <table class="excel-table w-full">
-                            <thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Name / Details</th><th style="width: 30%">Amount</th><th style="width: 10%"></th></tr></thead>
+                            <thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Name / Details</th><th style="width: 30%">Amount</th><th class="no-print" style="width: 10%"></th></tr></thead>
                             <tbody id="due-table-bank-history"></tbody>
                         </table>
                     </div>
@@ -1507,7 +1516,46 @@
                         <option value="Paid" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
                     </select>
                 </td>
-                <td class="text-center"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+            `;
+            return row;
+        }
+
+        function createBankRow(item) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="date" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
+                <td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.bankName === 'Bank Name' ? '' : item.bankName}" placeholder="Bank Name" onchange="updateDueItem(${item.id}, 'bankName', this.value)"></td>
+                <td><input type="number" step="0.001" class="w-full p-1 border rounded bg-white text-green-700 font-bold text-sm font-mono" value="${(item.amount === 0 || item.amount === '0') ? '' : item.amount}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
+                <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+            `;
+            return row;
+        }
+
+        function createHistoryRow(item) {
+            const row = document.createElement('tr');
+            const typeLabel = item.type === 'customer' ? '<span class="text-blue-600 font-bold text-xs">Receive</span>' : '<span class="text-red-600 font-bold text-xs">Payable</span>';
+            const dateValue = item.paymentDate || new Date().toISOString().split('T')[0]; // Default to today if missing
+            
+            // Display phone if available in history
+            let displayDetails = item.name;
+            if (item.type === 'customer' && item.phone) {
+                displayDetails += ` <span class="text-xs text-gray-500">(${item.phone})</span>`;
+            }
+
+            row.innerHTML = `
+                <td class="text-center">${typeLabel}</td>
+                <td class="font-medium">${displayDetails}</td>
+                <td class="font-mono">${parseFloat(item.amount).toFixed(3)}</td>
+                <td class="text-xs text-gray-500">${item.date}</td>
+                <td><input type="date" class="w-full p-1 border rounded bg-gray-50 text-xs" value="${dateValue}" onchange="updateDueItem(${item.id}, 'paymentDate', this.value)"></td>
+                <td>
+                    <select class="w-full p-1 border rounded bg-green-50 text-green-700 text-xs font-bold" onchange="updateDueItem(${item.id}, 'status', this.value)">
+                        <option value="Paid" selected>Paid</option>
+                        <option value="Pending">Revert to Pending</option>
+                    </select>
+                </td>
+                <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-gray-400 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button></td>
             `;
             return row;
         }
