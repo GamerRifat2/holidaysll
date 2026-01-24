@@ -16,6 +16,7 @@
         body.dark { background-color: #111827; color: #e5e7eb; }
         body.dark .bg-white { background-color: #1f2937; border-color: #374151; color: #e5e7eb; }
         body.dark .bg-gray-50 { background-color: #111827; border-color: #374151; }
+        body.dark .bg-gray-100 { background-color: #374151; }
         body.dark input, body.dark select, body.dark textarea { background-color: #374151; color: white; border-color: #4b5563; }
         body.dark .text-gray-800 { color: #f3f4f6; }
         body.dark .text-gray-700 { color: #d1d5db; }
@@ -103,6 +104,7 @@
             
             #tab-hisab.active { width: 100%; }
             #tab-expense.active { width: 100%; }
+            #tab-notes.active { width: 100%; }
             
             .excel-table th, .excel-table td { border: 1px solid #000 !important; font-size: 10px; color: black !important; background: white !important; } 
             
@@ -161,6 +163,9 @@
             </button>
             <button onclick="switchTab('hisab')" id="btn-tab-hisab" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
                 <i data-lucide="plane" class="w-4 h-4"></i> Ticketing
+            </button>
+            <button onclick="switchTab('notes')" id="btn-tab-notes" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
+                <i data-lucide="clipboard-list" class="w-4 h-4"></i> Notes & Check-in
             </button>
             <button onclick="switchTab('due')" id="btn-tab-due" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
                 <i data-lucide="wallet" class="w-4 h-4"></i> Due & Bank
@@ -287,6 +292,78 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- TAB 6: NOTES & CHECK-IN (NEW) -->
+        <div id="tab-notes" class="tab-content">
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[290mm] mx-auto">
+                 
+                 <!-- SECTION 1: GENERAL TASKS -->
+                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-fit">
+                    <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="clipboard-list" class="text-indigo-600"></i> Tasks & Notes</h2>
+                    </div>
+                    <div class="p-4">
+                        <form onsubmit="event.preventDefault(); addNote();" class="flex gap-2 mb-4">
+                            <input type="text" id="note-input" placeholder="Add a new task..." class="flex-grow p-2 border border-gray-300 rounded text-sm" required>
+                            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-indigo-700">Add</button>
+                        </form>
+                        <ul id="notes-list" class="space-y-2 max-h-[400px] overflow-y-auto">
+                            <!-- Notes inserted here -->
+                        </ul>
+                    </div>
+                 </div>
+
+                 <!-- SECTION 2: SALAMAIR CHECK-IN TRACKER -->
+                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="plane" class="text-green-600"></i> SalamAir Check-in Tracker</h2>
+                        <button onclick="toggleSalamHistory()" class="text-xs font-bold text-gray-500 hover:text-gray-700 underline">Show History</button>
+                    </div>
+                    <div class="p-4 border-b border-gray-100">
+                        <form onsubmit="event.preventDefault(); addSalamReminder();" class="flex flex-wrap gap-2 items-end">
+                            <div class="flex-grow">
+                                <label class="block text-[10px] font-bold text-gray-500 mb-1">PNR</label>
+                                <input type="text" id="salam-pnr" class="w-full p-2 border border-gray-300 rounded text-sm font-mono" placeholder="ABC123" required>
+                            </div>
+                            <div class="flex-grow">
+                                <label class="block text-[10px] font-bold text-gray-500 mb-1">Last Name</label>
+                                <input type="text" id="salam-name" class="w-full p-2 border border-gray-300 rounded text-sm" placeholder="Surname" required>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-500 mb-1">Flight Date</label>
+                                <input type="date" id="salam-date" class="w-full p-2 border border-gray-300 rounded text-sm" required>
+                            </div>
+                            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 h-[38px]">Track</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Active Reminders -->
+                    <div class="p-0">
+                         <table class="excel-table w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th style="width: 25%">Flight Date</th>
+                                    <th style="width: 20%">PNR</th>
+                                    <th style="width: 35%">Last Name</th>
+                                    <th style="width: 20%">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salam-active-list"></tbody>
+                        </table>
+                        <div id="salam-empty" class="text-center py-8 text-gray-400 text-xs italic">No pending check-ins.</div>
+                    </div>
+
+                    <!-- History (Hidden by default) -->
+                    <div id="salam-history-container" class="hidden border-t border-gray-200 mt-4">
+                        <div class="p-2 bg-gray-100 text-xs font-bold text-gray-600 text-center uppercase tracking-wide">Check-in History</div>
+                        <table class="excel-table w-full opacity-60">
+                            <tbody id="salam-history-list"></tbody>
+                        </table>
+                    </div>
+                 </div>
+
+             </div>
         </div>
 
         <!-- TAB 3: DUE & BANKING TRACKER -->
@@ -583,6 +660,8 @@
         const STORAGE_HISAB = 'holiday_ledger_data';
         const STORAGE_DUE = 'holiday_due_data';
         const STORAGE_EXPENSE = 'holiday_expense_data';
+        const STORAGE_TASKS = 'holiday_tasks_data';
+        const STORAGE_SALAM = 'holiday_salam_data';
         let dueViewMode = 'active'; // Global variable to track active/history view
         
         lucide.createIcons();
@@ -653,6 +732,7 @@
             if(tabName === 'dashboard') updateDashboard();
             if(tabName === 'due') loadDueData();
             if(tabName === 'expense') loadExpense();
+            if(tabName === 'notes') loadNotes(); // Load notes data
             if(tabName === 'invoice') {
                 if(itemsTableBody && itemsTableBody.children.length === 0) addRow();
             }
@@ -699,6 +779,8 @@
             if(hDate) hDate.valueAsDate = today;
             const expDate = document.getElementById('exp-date');
             if(expDate) expDate.valueAsDate = today;
+            const salamDate = document.getElementById('salam-date');
+            if(salamDate) salamDate.valueAsDate = today; // Set default SalamAir date
         }
 
         function resetInvoiceDate() {
@@ -1600,6 +1682,194 @@
         setTodayDate();
         initializeInvoiceNumber();
         if(itemsTableBody && itemsTableBody.children.length === 0) addRow();
+    </script>
+    <script>
+        // ... (Notes & Check-in Logic)
+        const STORAGE_NOTES = 'holiday_notes_data';
+        const STORAGE_SALAM_HISTORY = 'holiday_salam_history';
+
+        function loadNotes() {
+            loadGeneralNotes();
+            loadSalamReminders();
+            loadSalamHistory();
+        }
+
+        // --- General Notes ---
+        function getNotes() {
+            return JSON.parse(localStorage.getItem(STORAGE_NOTES) || '[]');
+        }
+
+        function addNote() {
+            const input = document.getElementById('note-input');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            const notes = getNotes();
+            notes.push({ id: Date.now(), text: text, done: false });
+            localStorage.setItem(STORAGE_NOTES, JSON.stringify(notes));
+            input.value = '';
+            loadGeneralNotes();
+        }
+
+        function deleteNote(id) {
+            const notes = getNotes().filter(n => n.id !== id);
+            localStorage.setItem(STORAGE_NOTES, JSON.stringify(notes));
+            loadGeneralNotes();
+        }
+
+        function loadGeneralNotes() {
+            const list = document.getElementById('notes-list');
+            if(!list) return;
+            list.innerHTML = '';
+            const notes = getNotes();
+            
+            notes.forEach(note => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100";
+                li.innerHTML = `
+                    <span class="text-sm text-gray-700">${note.text}</span>
+                    <button onclick="deleteNote(${note.id})" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                `;
+                list.appendChild(li);
+            });
+            lucide.createIcons();
+        }
+
+        // --- SalamAir Reminders ---
+        function getSalamReminders() {
+            return JSON.parse(localStorage.getItem(STORAGE_SALAM) || '[]');
+        }
+
+        function getSalamHistory() {
+            return JSON.parse(localStorage.getItem(STORAGE_SALAM_HISTORY) || '[]');
+        }
+
+        function addSalamReminder() {
+            const pnr = document.getElementById('salam-pnr').value;
+            const name = document.getElementById('salam-name').value;
+            const date = document.getElementById('salam-date').value;
+
+            if(!pnr || !name || !date) return alert('All fields required');
+
+            const reminders = getSalamReminders();
+            reminders.push({ id: Date.now(), pnr, name, date });
+            localStorage.setItem(STORAGE_SALAM, JSON.stringify(reminders));
+            
+            // Clear inputs
+            document.getElementById('salam-pnr').value = '';
+            document.getElementById('salam-name').value = '';
+            document.getElementById('salam-date').value = '';
+            
+            loadSalamReminders();
+        }
+
+        function completeSalamReminder(id) {
+            const reminders = getSalamReminders();
+            const index = reminders.findIndex(r => r.id === id);
+            if (index > -1) {
+                const item = reminders[index];
+                // Move to history
+                const history = getSalamHistory();
+                history.push({ ...item, completedDate: new Date().toISOString().split('T')[0] });
+                localStorage.setItem(STORAGE_SALAM_HISTORY, JSON.stringify(history));
+                
+                // Remove from active
+                reminders.splice(index, 1);
+                localStorage.setItem(STORAGE_SALAM, JSON.stringify(reminders));
+                
+                loadSalamReminders();
+                loadSalamHistory();
+            }
+        }
+
+        function deleteSalamReminder(id) {
+            if(!confirm("Delete this reminder?")) return;
+            const reminders = getSalamReminders().filter(r => r.id !== id);
+            localStorage.setItem(STORAGE_SALAM, JSON.stringify(reminders));
+            loadSalamReminders();
+        }
+
+        function deleteSalamHistory(id) {
+            if(!confirm("Delete this history record?")) return;
+            const history = getSalamHistory().filter(r => r.id !== id);
+            localStorage.setItem(STORAGE_SALAM_HISTORY, JSON.stringify(history));
+            loadSalamHistory();
+        }
+
+        function loadSalamReminders() {
+            const tbody = document.getElementById('salam-active-list');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            const reminders = getSalamReminders();
+            
+            // Sort by date (soonest first)
+            reminders.sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            if(reminders.length === 0) {
+                document.getElementById('salam-empty').classList.remove('hidden');
+            } else {
+                document.getElementById('salam-empty').classList.add('hidden');
+                
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const tomorrow = new Date(today);
+                tomorrow.setDate(today.getDate() + 1);
+
+                reminders.forEach(r => {
+                    const flightDate = new Date(r.date);
+                    flightDate.setHours(0,0,0,0);
+                    
+                    let rowClass = "";
+                    if (flightDate.getTime() === today.getTime()) rowClass = "bg-red-50 border-l-4 border-red-500"; // Flight Today! (Urgent)
+                    else if (flightDate.getTime() === tomorrow.getTime()) rowClass = "bg-yellow-50 border-l-4 border-yellow-400"; // Flight Tomorrow (Check-in time)
+                    else if (flightDate < today) rowClass = "bg-gray-100 opacity-60"; // Passed
+
+                    const row = document.createElement('tr');
+                    row.className = rowClass;
+                    row.innerHTML = `
+                        <td class="font-mono text-xs">${r.date}</td>
+                        <td class="font-bold font-mono">${r.pnr}</td>
+                        <td>${r.name}</td>
+                        <td class="text-center flex gap-2 justify-center">
+                             <button onclick="completeSalamReminder(${r.id})" class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700" title="Mark Check-in Done">Done</button>
+                             <button onclick="deleteSalamReminder(${r.id})" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function loadSalamHistory() {
+            const tbody = document.getElementById('salam-history-list');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            const history = getSalamHistory();
+            
+            // Sort newest completed first
+            history.sort((a,b) => b.id - a.id);
+
+            history.forEach(r => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="text-xs text-gray-500">${r.date}</td>
+                    <td class="text-xs">${r.pnr}</td>
+                    <td class="text-xs">${r.name}</td>
+                    <td class="text-center text-xs text-green-600 font-bold">
+                        Checked-in
+                         <button onclick="deleteSalamHistory(${r.id})" class="ml-2 text-gray-300 hover:text-red-400"><i data-lucide="x" class="w-3 h-3 inline"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        function toggleSalamHistory() {
+            const container = document.getElementById('salam-history-container');
+            container.classList.toggle('hidden');
+        }
     </script>
 </body>
 </html>
