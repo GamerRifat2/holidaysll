@@ -134,16 +134,13 @@
         <!-- GLOBAL HEADER & BACKUP CONTROLS -->
         <div id="global-header" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
-                <!-- Static Header Logo (No Upload) -->
                 <img id="header-logo-img" src="LOGO.png" alt="Holiday Travels" class="h-12 w-auto object-contain">
             </div>
             <div class="flex gap-2 w-full md:w-auto items-center">
-                <!-- Dark Mode Toggle -->
                 <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 transition-colors mr-2" title="Toggle Dark Mode">
                     <i data-lucide="moon" class="w-5 h-5 text-gray-600 dark:hidden"></i>
                     <i data-lucide="sun" class="w-5 h-5 text-yellow-400 hidden dark:block"></i>
                 </button>
-
                 <button onclick="backupData()" class="flex-1 md:flex-none bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-700 flex items-center justify-center gap-2 transition-all shadow-sm">
                     <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup All Data
                 </button>
@@ -181,7 +178,6 @@
                     <p class="text-sm text-gray-500">Yearly Performance Overview</p>
                 </div>
                 
-                <!-- Summary Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white">
                     <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl border border-green-200 shadow-sm">
                         <div class="text-green-600 font-bold uppercase text-xs tracking-wider mb-1">Total Sell (Year)</div>
@@ -200,7 +196,6 @@
                     </div>
                 </div>
 
-                <!-- Charts -->
                 <div class="p-6 grid grid-cols-1 gap-8">
                     <div class="chart-container bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                         <h3 class="text-lg font-bold text-gray-700 mb-4">Monthly Sales vs Net Cost</h3>
@@ -226,12 +221,8 @@
                             <input type="month" id="hisab-month-filter" class="p-1 border border-gray-300 rounded text-sm font-bold text-gray-800" onchange="loadHisab()">
                         </div>
                         <div class="flex gap-2">
-                             <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-2 rounded text-xs font-bold hover:bg-gray-700 flex items-center gap-1">
-                                <i data-lucide="printer" class="w-3 h-3"></i> Print
-                            </button>
-                             <button onclick="exportHisab('month')" class="bg-green-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-1">
-                                <i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Export Excel
-                            </button>
+                             <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-2 rounded text-xs font-bold hover:bg-gray-700 flex items-center gap-1"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
+                             <button onclick="exportHisab('month')" class="bg-green-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-1"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Export Excel</button>
                         </div>
                     </div>
                 </div>
@@ -309,15 +300,26 @@
                 <!-- Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 bg-white">
                     <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                        <p class="text-xs font-bold text-blue-600 uppercase">Customer Due (Pending)</p>
+                        <p class="text-xs font-bold text-blue-600 uppercase">Customer Due (Receivable)</p>
                         <p class="text-2xl font-black text-gray-800" id="due-total-receive">0.000</p>
                     </div>
                     <div class="bg-red-50 p-4 rounded-xl border border-red-100">
-                        <p class="text-xs font-bold text-red-600 uppercase">My Payables (Pending)</p>
+                        <p class="text-xs font-bold text-red-600 uppercase">My Payables (Liability)</p>
                         <p class="text-2xl font-black text-gray-800" id="due-total-pay">0.000</p>
                     </div>
-                <div class="grid grid-cols-1 gap-6 p-6">
-                    <!-- SECTION 1: CUSTOMERS DUE TO ME -->
+                    <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                        <p class="text-xs font-bold text-green-600 uppercase">Total Bank Deposit</p>
+                        <p class="text-2xl font-black text-gray-800" id="due-total-bank">0.000</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                        <p class="text-xs font-bold text-purple-600 uppercase">Projected Net Balance</p>
+                        <p class="text-2xl font-black text-gray-800" id="due-total-balance">0.000</p>
+                        <p class="text-[9px] text-purple-400 mt-1 uppercase tracking-wide">Due + Bank - Payables</p>
+                    </div>
+                </div>
+
+                <!-- ACTIVE VIEW -->
+                <div id="due-active-view" class="grid grid-cols-1 gap-6 p-6">
                     <div>
                         <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="arrow-down-left" class="text-blue-500 w-4 h-4"></i> Customer Dues (Receivables)</h3>
                         <table class="excel-table w-full">
@@ -334,8 +336,6 @@
                             <tbody id="due-table-customer"></tbody>
                         </table>
                     </div>
-
-                    <!-- SECTION 2: MY PAYABLES -->
                     <div>
                         <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="arrow-up-right" class="text-red-500 w-4 h-4"></i> My Payables (Pending)</h3>
                         <table class="excel-table w-full">
@@ -388,7 +388,6 @@
         <!-- TAB 5: EXPENSE CALCULATOR (NEW) -->
         <div id="tab-expense" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
-                <!-- Expense Header -->
                 <div class="p-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center no-print">
                     <div class="flex items-center gap-2">
                         <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="calculator" class="text-purple-600"></i> Expense Calculator</h2>
@@ -401,7 +400,6 @@
                     </div>
                 </div>
 
-                <!-- Expense Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white">
                     <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
                         <p class="text-xs font-bold text-blue-600 uppercase">Office Expenses</p>
@@ -417,44 +415,19 @@
                     </div>
                 </div>
 
-                <!-- Add Expense Form -->
                 <div class="px-6 py-4 bg-white border-b border-gray-200 no-print">
                     <form onsubmit="event.preventDefault(); addExpenseEntry();" class="flex flex-wrap gap-2 items-end">
-                         <div class="w-36">
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Date</label>
-                            <input type="date" id="exp-date" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required>
-                        </div>
-                        <div class="flex-grow min-w-[200px]">
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Description</label>
-                            <input type="text" id="exp-desc" placeholder="Expense Details..." class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required>
-                        </div>
-                        <div class="w-32">
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Type</label>
-                            <select id="exp-type" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50">
-                                <option value="Office">Office</option>
-                                <option value="Personal">Personal</option>
-                            </select>
-                        </div>
-                        <div class="w-28">
-                            <label class="block text-xs font-bold text-gray-500 mb-1">Amount</label>
-                            <input type="number" step="0.001" id="exp-amount" placeholder="0.000" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required>
-                        </div>
+                         <div class="w-36"><label class="block text-xs font-bold text-gray-500 mb-1">Date</label><input type="date" id="exp-date" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required></div>
+                        <div class="flex-grow min-w-[200px]"><label class="block text-xs font-bold text-gray-500 mb-1">Description</label><input type="text" id="exp-desc" placeholder="Expense Details..." class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required></div>
+                        <div class="w-32"><label class="block text-xs font-bold text-gray-500 mb-1">Type</label><select id="exp-type" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50"><option value="Office">Office</option><option value="Personal">Personal</option></select></div>
+                        <div class="w-28"><label class="block text-xs font-bold text-gray-500 mb-1">Amount</label><input type="number" step="0.001" id="exp-amount" placeholder="0.000" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required></div>
                         <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded font-bold hover:bg-red-700 h-[38px] text-sm shadow-sm">Add</button>
                     </form>
                 </div>
 
-                <!-- Expense Table -->
                 <div class="p-6 bg-white min-h-[300px]">
                     <table class="excel-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 15%">Date</th>
-                                <th style="width: 45%">Description</th>
-                                <th style="width: 15%">Type</th>
-                                <th style="width: 15%">Amount</th>
-                                <th class="no-print" style="width: 10%"></th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th style="width: 15%">Date</th><th style="width: 45%">Description</th><th style="width: 15%">Type</th><th style="width: 15%">Amount</th><th class="no-print" style="width: 10%"></th></tr></thead>
                         <tbody id="expense-table-body" class="text-gray-700 font-mono"></tbody>
                     </table>
                 </div>
@@ -463,7 +436,6 @@
 
         <!-- TAB 5: INVOICE GENERATOR -->
         <div id="tab-invoice" class="tab-content">
-            <!-- Controls -->
             <div class="controls bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 justify-between items-center mb-6 max-w-[210mm] mx-auto">
                 <div class="flex items-center gap-2 flex-grow max-w-md">
                     <input type="number" id="search-input" placeholder="Search Invoice No" class="flex-grow p-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:outline-none text-sm">
@@ -482,7 +454,6 @@
                 </div>
             </div>
 
-            <!-- INVOICE PAPER -->
             <div class="invoice-paper" id="invoice-view">
                 <div id="paid-watermark" class="paid-seal"><div class="text-5xl font-black uppercase tracking-wider">PAID</div><div class="text-3xl font-bold arabic-text mt-0">مدفوع</div></div>
                 
@@ -567,6 +538,7 @@
         const STORAGE_HISAB = 'holiday_ledger_data';
         const STORAGE_DUE = 'holiday_due_data';
         const STORAGE_EXPENSE = 'holiday_expense_data';
+        let dueViewMode = 'active'; // Global variable to track active/history view
         
         lucide.createIcons();
 
@@ -1161,9 +1133,9 @@
                 });
             }
 
-            document.getElementById('exp-total-office').textContent = officeTotal.toFixed(3);
-            document.getElementById('exp-total-personal').textContent = personalTotal.toFixed(3);
-            document.getElementById('exp-total-grand').textContent = (officeTotal + personalTotal).toFixed(3);
+            const expOff = document.getElementById('exp-total-office'); if(expOff) expOff.textContent = officeTotal.toFixed(3);
+            const expPer = document.getElementById('exp-total-personal'); if(expPer) expPer.textContent = personalTotal.toFixed(3);
+            const expGrand = document.getElementById('exp-total-grand'); if(expGrand) expGrand.textContent = (officeTotal + personalTotal).toFixed(3);
             lucide.createIcons();
         }
 
@@ -1185,6 +1157,27 @@
         }
 
         // --- DUE & BANKING LOGIC ---
+        function setDueView(mode) {
+            dueViewMode = mode;
+            const activeBtn = document.getElementById('btn-due-active');
+            const historyBtn = document.getElementById('btn-due-history');
+            const activeView = document.getElementById('due-active-view');
+            const historyView = document.getElementById('due-history-view');
+
+            if (mode === 'active') {
+                if(activeBtn) activeBtn.className = "px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all";
+                if(historyBtn) historyBtn.className = "px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all";
+                if(activeView) activeView.classList.remove('hidden');
+                if(historyView) historyView.classList.add('hidden');
+            } else {
+                if(historyBtn) historyBtn.className = "px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all";
+                if(activeBtn) activeBtn.className = "px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all";
+                if(historyView) historyView.classList.remove('hidden');
+                if(activeView) activeView.classList.add('hidden');
+            }
+            loadDueData();
+        }
+
         function getDueData() {
             const raw = localStorage.getItem(STORAGE_DUE);
             return raw ? JSON.parse(raw) : [];
@@ -1254,7 +1247,8 @@
             data.push(lastDeletedDue);
             localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
             loadDueData();
-            document.getElementById('btn-undo-due').classList.add('hidden');
+            const btn = document.getElementById('btn-undo-due');
+            if(btn) btn.classList.add('hidden');
             lastDeletedDue = null;
         }
 
@@ -1270,9 +1264,9 @@
                 if (item.type === 'bank') totalBank += amt;
             });
             
-            document.getElementById('due-total-receive').textContent = totalReceive.toFixed(3);
-            document.getElementById('due-total-pay').textContent = totalPay.toFixed(3);
-            document.getElementById('due-total-bank').textContent = totalBank.toFixed(3);
+            const rEl = document.getElementById('due-total-receive'); if(rEl) rEl.textContent = totalReceive.toFixed(3);
+            const pEl = document.getElementById('due-total-pay'); if(pEl) pEl.textContent = totalPay.toFixed(3);
+            const bEl = document.getElementById('due-total-bank'); if(bEl) bEl.textContent = totalBank.toFixed(3);
             
             const netBalance = (totalReceive + totalBank) - totalPay;
             const balEl = document.getElementById('due-total-balance');
@@ -1305,22 +1299,22 @@
                 if (dueViewMode === 'active') {
                     if (item.type === 'bank') {
                         // Show recent 5 banks in active
-                        if (bankContainer.childElementCount < 5) {
+                        if (bankContainer && bankContainer.childElementCount < 5) {
                             bankContainer.appendChild(createBankRow(item));
                         }
                     } else if (item.status === 'Pending') {
                         // Show all pending
                         const row = createEditableRow(item);
-                        if (item.type === 'customer') custContainer.appendChild(row);
-                        else payContainer.appendChild(row);
+                        if (item.type === 'customer' && custContainer) custContainer.appendChild(row);
+                        else if(payContainer) payContainer.appendChild(row);
                     }
                 }
 
                 // HISTORY VIEW RENDER
                 if (dueViewMode === 'history') {
-                    if (item.type === 'bank') {
+                    if (item.type === 'bank' && bankHistoryContainer) {
                         bankHistoryContainer.appendChild(createBankRow(item));
-                    } else if (item.status === 'Paid') {
+                    } else if (item.status === 'Paid' && historyContainer) {
                         historyContainer.appendChild(createHistoryRow(item));
                     }
                 }
@@ -1428,9 +1422,9 @@
             const profitData = sortedMonths.map(m => monthlyStats[m].profit);
 
             // 4. Update Stats Cards
-            document.getElementById('dash-total-sell').textContent = yearSell.toFixed(3);
-            document.getElementById('dash-total-profit').textContent = yearProfit.toFixed(3);
-            document.getElementById('dash-total-due').textContent = totalDue.toFixed(3);
+            const tSell = document.getElementById('dash-total-sell'); if(tSell) tSell.textContent = yearSell.toFixed(3);
+            const tProf = document.getElementById('dash-total-profit'); if(tProf) tProf.textContent = yearProfit.toFixed(3);
+            const tDue = document.getElementById('dash-total-due'); if(tDue) tDue.textContent = totalDue.toFixed(3);
 
             // 5. Render/Update Charts
             renderSalesChart(labels, salesData, netData);
