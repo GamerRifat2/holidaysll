@@ -3,629 +3,1239 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice Generator - Holiday Travels</title>
+    <title>Holiday Travels - Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-        }
-        .arabic-text {
-            font-family: 'Cairo', sans-serif;
-            direction: rtl;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .arabic-text { font-family: 'Cairo', sans-serif; direction: rtl; }
+        
+        /* Tab Animations */
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Invoice Paper Styles */
         .invoice-paper {
-            max-width: 210mm;
-            min-height: 297mm;
-            margin: 2rem auto;
-            padding: 2rem;
-            background-color: white;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            display: flex;
-            flex-direction: column;
-            position: relative;
+            max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 2rem;
+            background-color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column; position: relative;
         }
 
         /* Editable Fields */
-        .editable {
-            transition: all 0.2s;
-            border-bottom: 1px dashed transparent;
-            min-width: 20px;
-            display: inline-block;
-        }
-        .editable:hover, .editable:focus {
-            background-color: #f0fdf4;
-            border-bottom: 1px dashed #22c55e;
-            outline: none;
-            border-radius: 2px;
-        }
-        .editable:empty:before {
-            content: attr(data-placeholder);
-            color: #9ca3af;
-        }
+        .editable { transition: all 0.2s; border-bottom: 1px dashed transparent; min-width: 20px; display: inline-block; }
+        .editable:hover, .editable:focus { background-color: #f0fdf4; border-bottom: 1px dashed #22c55e; outline: none; border-radius: 2px; }
+        .editable:empty:before { content: attr(data-placeholder); color: #9ca3af; }
 
-        /* Paid Stamp - UPDATED FIXES */
+        /* Paid Stamp */
         .paid-seal {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-30deg); /* Better rotation */
-            border: 0.4rem solid #22c55e; /* Thicker border */
-            border-radius: 0.8rem;
-            padding: 0.5rem 2rem;
-            text-align: center;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 50; /* Force on top of everything */
-            transition: opacity 0.3s ease;
-            color: #22c55e;
-            background-color: rgba(255, 255, 255, 0.9); /* White background to block text behind it */
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Subtle shadow for depth */
-            display: none; /* Hidden by default */
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg);
+            border: 0.4rem solid #22c55e; border-radius: 0.8rem; padding: 0.5rem 2rem;
+            text-align: center; opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.3s ease;
+            color: #22c55e; background-color: rgba(255, 255, 255, 0.9); box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: none;
         }
-        
-        .paid-seal.is-visible {
-            opacity: 0.4 !important;
-            display: block !important;
-        }
+        .paid-seal.is-visible { opacity: 0.4 !important; display: block !important; }
 
         /* Delete Button */
-        .delete-row {
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        .item-row:hover .delete-row {
-            opacity: 1;
-        }
+        .delete-row { opacity: 0; transition: opacity 0.2s; }
+        .item-row:hover .delete-row { opacity: 1; }
+
+        /* Excel-like Table Styles */
+        .excel-table { border-collapse: collapse; width: 100%; font-size: 11px; } 
+        .excel-table th, .excel-table td { border: 1px solid #d1d5db; padding: 6px 4px; }
+        .excel-table th { background-color: #f3f4f6; font-weight: 700; text-align: center; white-space: nowrap; }
+        .excel-table tr:nth-child(even) { background-color: #f9fafb; }
+        .excel-table tr:hover { background-color: #eff6ff; cursor: pointer; }
+        .excel-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+        .row-selected { background-color: #fff7ed !important; border-left: 3px solid #f97316; }
 
         /* Print Settings */
         @media print {
-            @page { 
-                margin: 0; 
-                size: A4; 
-            }
-            body { 
-                background: white; 
-                margin: 0; 
-                padding: 0; 
-            }
-            .invoice-paper {
-                box-shadow: none;
-                margin: 0;
-                width: 100%;
-                max-width: 210mm;
-                padding: 10mm;
-                min-height: auto;
-                height: auto;
-            }
-            .controls, #add-item-btn, .delete-row, .no-print, #login-screen { display: none !important; }
-            .bg-gray-100 { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact; }
-            .bg-gray-800 { background-color: #1f2937 !important; color: white !important; -webkit-print-color-adjust: exact; }
-            .text-white { color: white !important; }
-            .editable { border-bottom: none !important; background: transparent !important; }
+            @page { margin: 0; size: A4 landscape; } 
+            body { background: white; margin: 0; padding: 0; }
+            .no-print, .controls, #login-screen, .tabs-nav, #global-header { display: none !important; }
             
-            /* FORCE STAMP VISIBILITY IN PRINT */
-            .paid-seal {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                display: none;
-            }
-            .paid-seal.is-visible {
-                display: block !important;
-            }
+            .tab-content { display: none !important; }
+            .tab-content.active { display: block !important; }
 
-            /* --- FORCE DESKTOP LAYOUT IN PRINT --- */
-            header {
-                flex-direction: row !important;
-                display: flex !important;
-                align-items: center !important;
-            }
-            header > div {
-                width: 33.33% !important;
-            }
-            header > div:first-child { text-align: left !important; }
-            header > div:last-child { text-align: right !important; }
+            .invoice-paper { box-shadow: none; margin: 0; width: 100%; max-width: 100%; padding: 5mm; min-height: auto; height: auto; }
             
-            .grid {
-                display: grid !important;
-                grid-template-columns: 1fr 1fr !important;
-            }
-            .md\:text-right {
-                text-align: right !important;
-            }
-
-            footer > div {
-                display: flex !important;
-                flex-direction: row !important;
-                justify-content: space-between !important;
-                align-items: flex-end !important;
-            }
-            footer .mt-4 {
-                margin-top: 0 !important;
-            }
-
-            * {
-                font-family: 'Inter', sans-serif !important;
-            }
-            .arabic-text, .arabic-text * {
-                font-family: 'Cairo', sans-serif !important;
-            }
+            #tab-invoice.active header { flex-direction: row !important; display: flex !important; }
+            #tab-invoice.active header > div { width: 33.33% !important; }
+            #tab-invoice.active .grid { display: grid !important; grid-template-columns: 1fr 1fr !important; }
+            
+            #tab-hisab.active { width: 100%; }
+            .excel-table th, .excel-table td { border: 1px solid #000 !important; font-size: 10px; } 
+            
+            #tab-dashboard.active .chart-container { page-break-inside: avoid; }
+            
+            .paid-seal.is-visible { display: block !important; }
         }
     </style>
 </head>
 <body class="text-gray-800">
 
-    <!-- PASSWORD PROTECTION SCREEN -->
+    <!-- PASSWORD SCREEN -->
     <div id="login-screen" class="fixed inset-0 bg-gray-100 z-[9999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center border border-gray-200">
             <div class="mb-6 flex justify-center">
-                <div class="bg-blue-100 p-3 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </div>
+                <img src="logo.png" onerror="this.style.display='none'" alt="Holiday Travels" class="h-24 w-auto object-contain">
             </div>
             <h2 class="text-2xl font-bold mb-2 text-gray-800">Login Required</h2>
-            <p class="text-gray-500 mb-6 text-sm">Please enter the passcode to access the invoice generator.</p>
-            
-            <input type="password" id="password-input" placeholder="Enter Passcode" class="w-full p-3 border border-gray-200 rounded-lg mb-4 text-center text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
-            
-            <button onclick="attemptLogin()" class="w-full bg-gray-900 text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition-all transform active:scale-95 shadow-lg">
-                Login
-            </button>
-            <p id="login-error" class="text-red-500 text-sm mt-4 hidden font-medium flex items-center justify-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-                Incorrect Code
-            </p>
+            <p class="text-gray-500 mb-6 text-sm">Enter passcode to access.</p>
+            <input type="password" id="password-input" placeholder="Passcode" class="w-full p-3 border border-gray-200 rounded-lg mb-4 text-center text-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            <button onclick="attemptLogin()" class="w-full bg-gray-900 text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-lg">Login</button>
+            <p id="login-error" class="text-red-500 text-sm mt-4 hidden font-medium">Incorrect Code</p>
         </div>
     </div>
 
-    <!-- Controls -->
-    <div class="controls max-w-[210mm] mx-auto mt-6 px-4 mb-4">
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 justify-between items-center">
-            
-            <!-- Search -->
-            <div class="flex items-center gap-2 flex-grow max-w-md">
-                <input type="number" id="search-input" placeholder="Search No / بحث برقم" class="flex-grow p-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:outline-none text-sm">
-                <button onclick="searchInvoice()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">Search</button>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex gap-2">
-                <button onclick="generateNewInvoice()" class="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-200 font-bold border border-gray-300">
-                    <i data-lucide="plus" class="w-4 h-4"></i> New
-                </button>
-                <button onclick="saveInvoice()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-bold shadow-sm">
-                    <i data-lucide="save" class="w-4 h-4"></i> Save
-                </button>
-                <button onclick="window.print()" class="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 font-bold shadow-sm">
-                    <i data-lucide="printer" class="w-4 h-4"></i> Print
-                </button>
-            </div>
-        </div>
-
-        <div class="mt-2 flex justify-between items-center text-xs text-gray-500 px-2">
-            <span id="system-message" class="font-medium">Ready</span>
-            <div class="flex items-center gap-2">
-                <label class="flex items-center gap-2 cursor-pointer hover:text-green-600 font-bold">
-                    <input type="checkbox" id="paid-toggle" class="rounded text-green-600 focus:ring-green-500">
-                    <span>Mark as PAID / مدفوع</span>
-                </label>
-                <span class="text-gray-300">|</span>
-                <button onclick="backupData()" class="hover:underline">Backup</button>
-                <label class="cursor-pointer hover:underline">
-                    Restore <input type="file" class="hidden" onchange="restoreData(this)" accept=".json">
-                </label>
-            </div>
-        </div>
-    </div>
-
-    <!-- Invoice Paper -->
-    <div class="invoice-paper" id="invoice">
+    <!-- MAIN APP CONTAINER -->
+    <div class="max-w-[290mm] mx-auto mt-6 px-4 mb-4"> 
         
-        <!-- Paid Seal -->
-        <div id="paid-watermark" class="paid-seal">
-            <div class="text-5xl font-black uppercase tracking-wider">PAID</div>
-            <div class="text-3xl font-bold arabic-text mt-0">مدفوع</div>
-        </div>
-
-        <!-- Header (3 Columns: English - Logo - Arabic) -->
-        <header class="flex flex-col md:flex-row justify-between items-center pb-6 border-b relative z-10 gap-4">
-            
-            <!-- Left: English -->
-            <div class="text-center md:text-left w-full md:w-1/3 pt-2">
-                <h1 class="font-bold text-gray-800 text-lg uppercase leading-tight mb-1">HOLIDAY TRAVELS</h1>
-                <p class="text-xs text-gray-600">NEAR PAK MOSJID SALALAH</p>
-                <p class="text-xs text-gray-600">Salalah, Sultanate of Oman</p>
-                <p class="text-xs text-gray-600 mt-1"><strong>Phone:</strong> 78594007</p>
-                <p class="text-xs text-gray-600"><strong>Email:</strong> HOLIDAYTRAVELS.OM@GMAIL.COM</p>
-            </div>
-
-            <!-- Center: Logo -->
-            <div class="text-center w-full md:w-1/3 flex justify-center">
-                <img src="LOGO.jpg" 
-                     onerror="this.style.display='none'"
-                     alt="Logo" 
-                     class="h-28 w-auto object-contain mx-auto">
-            </div>
-
-            <!-- Right: Arabic -->
-            <div class="text-center md:text-right w-full md:w-1/3 pt-2 arabic-text">
-                <h1 contenteditable="true" class="editable font-bold text-gray-800 text-xl leading-tight mb-1">سفريات هوليداي</h1>
-                <p contenteditable="true" class="editable text-sm text-gray-600">بالقرب من المسجد الباكستاني</p>
-                <p contenteditable="true" class="editable text-sm text-gray-600">صلالة، سلطنة عمان</p>
-                <p class="text-sm text-gray-600 mt-1"><strong class="mx-1">هاتف:</strong><span class="font-sans" contenteditable="true">78594007</span></p>
-                <p class="text-sm text-gray-600"><strong class="mx-1">بريد إلكتروني:</strong><span class="font-sans text-xs" contenteditable="true">HOLIDAYTRAVELS.OM@GMAIL.COM</span></p>
-            </div>
-        </header>
-
-        <!-- Invoice Title & Meta Row -->
-        <div class="flex justify-between items-center mt-6 mb-6">
-            <div class="text-left">
-                <div class="flex flex-col">
-                    <span class="text-gray-500 text-xs font-bold uppercase">Invoice No / رقم الفاتورة</span>
-                    <span id="invoice-number" class="text-xl font-bold text-gray-800 font-mono">9877</span>
+        <!-- GLOBAL HEADER & BACKUP CONTROLS -->
+        <div id="global-header" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-50 p-2 rounded-lg border border-blue-100">
+                    <i data-lucide="briefcase" class="w-6 h-6 text-blue-600"></i>
                 </div>
-            </div>
-            <div class="text-center">
-                <h2 class="text-3xl font-bold uppercase text-gray-800 tracking-wide">INVOICE <span class="arabic-text font-normal text-2xl">فاتورة</span></h2>
-            </div>
-            <div class="text-right">
-                <div class="flex flex-col">
-                     <span class="text-gray-500 text-xs font-bold uppercase">Date / التاريخ</span>
-                    <span id="invoice-date" contenteditable="true" class="editable text-xl font-bold text-gray-800"></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Billed To -->
-        <section class="mb-8 bg-gray-50 rounded-lg p-4 border border-gray-100">
-            <div class="flex justify-between items-end mb-2">
-                <h3 class="text-xs font-bold uppercase text-gray-500 tracking-wider">Billed To</h3>
-                <h3 class="text-sm font-bold text-gray-500 arabic-text">فاتورة إلى</h3>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                     <label class="block text-xs text-gray-400">Customer Name / اسم العميل</label>
-                    <div contenteditable="true" id="customer-name" class="editable text-lg font-bold text-gray-800 w-full p-1" data-placeholder="Name">Customer Name</div>
-                </div>
-                <div class="md:text-right">
-                    <label class="block text-xs text-gray-400">Phone / رقم الهاتف</label>
-                    <div contenteditable="true" id="customer-phone" class="editable text-gray-600 w-full p-1 font-sans" data-placeholder="Phone">Phone Number</div>
+                    <h1 class="text-xl font-bold text-gray-800 leading-tight">Holiday Travels</h1>
                 </div>
             </div>
-        </section>
+            <div class="flex gap-2 w-full md:w-auto">
+                <button onclick="backupData()" class="flex-1 md:flex-none bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-700 flex items-center justify-center gap-2 transition-all shadow-sm">
+                    <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup All Data
+                </button>
+                <label class="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm">
+                    <i data-lucide="upload-cloud" class="w-4 h-4"></i> Restore Data
+                    <input type="file" class="hidden" onchange="restoreData(this)" accept=".json">
+                </label>
+            </div>
+        </div>
 
-        <!-- Table -->
-        <section class="flex-grow">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="bg-gray-800 text-white">
-                        <th class="p-3 text-sm font-semibold uppercase tracking-wider w-3/4 rounded-tl-lg rounded-bl-lg">
-                            <div class="flex justify-between">
-                                <span>Item Description</span>
-                                <span class="arabic-text font-normal">تفاصيل</span>
-                            </div>
-                        </th>
-                        <th class="p-3 text-right text-sm font-semibold uppercase tracking-wider w-1/4 rounded-tr-lg rounded-br-lg">
-                            <div class="flex flex-col items-end">
-                                <span>Amount (OMR)</span>
-                                <span class="arabic-text text-xs text-gray-300">المبلغ (ر.ع)</span>
-                            </div>
-                        </th>
-                        <th class="w-10 no-print bg-white"></th>
-                    </tr>
-                </thead>
-                <tbody id="items-table-body">
-                    <!-- Rows -->
-                </tbody>
-            </table>
-            <button id="add-item-btn" onclick="addRow()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2">
-                <i data-lucide="plus" class="w-4 h-4"></i> Add Item / إضافة
+        <!-- NAVIGATION TABS -->
+        <div class="tabs-nav flex gap-2 mb-6 bg-white p-2 rounded-xl shadow-sm border border-gray-200 no-print max-w-[210mm] mx-auto overflow-x-auto">
+            <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Dashboard
             </button>
-        </section>
+            <button onclick="switchTab('hisab')" id="btn-tab-hisab" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
+                <i data-lucide="plane" class="w-4 h-4"></i> Ticketing
+            </button>
+            <button onclick="switchTab('due')" id="btn-tab-due" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
+                <i data-lucide="wallet" class="w-4 h-4"></i> Due & Bank
+            </button>
+            <button onclick="switchTab('invoice')" id="btn-tab-invoice" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
+                <i data-lucide="file-text" class="w-4 h-4"></i> Invoice
+            </button>
+        </div>
 
-        <!-- Totals -->
-        <section class="mt-8 flex justify-end">
-            <div class="w-72">
-                <div class="flex justify-between items-center py-2 border-b border-gray-200">
-                    <span class="text-gray-600 font-medium text-sm">Subtotal / <span class="arabic-text">المجموع الفرعي</span></span>
-                    <span class="font-bold text-gray-800"><span id="subtotal">0.000</span></span>
+        <!-- TAB 1: DASHBOARD (Now First) -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
+                <div class="p-6 bg-gray-50 border-b border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="bar-chart-3" class="text-blue-600"></i> Sales Dashboard</h2>
+                    <p class="text-sm text-gray-500">Yearly Performance Overview</p>
                 </div>
-                <div class="flex justify-between items-center py-3 bg-gray-100 px-4 rounded-lg mt-3 border border-gray-200">
-                    <span class="text-lg font-bold text-gray-800">Total / <span class="arabic-text">الإجمالي</span></span>
-                    <span class="text-xl font-bold text-blue-900"><span id="total">0.000</span> <span class="text-sm text-gray-500">OMR</span></span>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer class="mt-12 pt-6 border-t border-gray-200 text-gray-500 text-sm">
-            <div class="flex flex-col md:flex-row justify-between items-end">
                 
-                <!-- Company Legal Details -->
-                 <div class="text-left space-y-1">
-                    <p class="text-xs uppercase font-bold text-gray-800">Company Reg Details / بيانات السجل التجاري</p>
-                    <p class="font-bold text-gray-700">Sajer Desert Rare Trading Company</p>
-                    <p class="font-bold text-gray-700 arabic-text">شركة صحراء ساجر للتجارة النادرة</p>
-                    <p>
-                        <strong class="text-xs">CR No / رقم السجل:</strong> <span class="font-mono">1588173</span>
-                    </p>
-                 </div>
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white">
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl border border-green-200 shadow-sm">
+                        <div class="text-green-600 font-bold uppercase text-xs tracking-wider mb-1">Total Sell (Year)</div>
+                        <div class="text-3xl font-black text-gray-800" id="dash-total-sell">0.000</div>
+                        <div class="text-xs text-green-700 mt-1">OMR</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200 shadow-sm">
+                        <div class="text-blue-600 font-bold uppercase text-xs tracking-wider mb-1">Total Profit (Year)</div>
+                        <div class="text-3xl font-black text-gray-800" id="dash-total-profit">0.000</div>
+                        <div class="text-xs text-blue-700 mt-1">OMR</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-2xl border border-orange-200 shadow-sm">
+                        <div class="text-orange-600 font-bold uppercase text-xs tracking-wider mb-1">Total Due</div>
+                        <div class="text-3xl font-black text-gray-800" id="dash-total-due">0.000</div>
+                        <div class="text-xs text-orange-700 mt-1">OMR</div>
+                    </div>
+                </div>
 
-                 <!-- WhatsApp Image -->
-                 <div class="mt-4 md:mt-0 flex flex-col items-center">
-                    <img src="WHATSAPP.jpg" 
-                        onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1200px-WhatsApp.svg.png'"
-                        alt="WhatsApp" class="w-16 h-16 object-contain mb-1">
-                    <p class="text-xs font-bold text-green-600">Contact Support</p>
-                 </div>
+                <!-- Charts -->
+                <div class="p-6 grid grid-cols-1 gap-8">
+                    <div class="chart-container bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Monthly Sales vs Net Cost</h3>
+                        <canvas id="salesChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="chart-container bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Monthly Profit Trend</h3>
+                        <canvas id="profitChart" width="400" height="150"></canvas>
+                    </div>
+                </div>
             </div>
-            
-            <p class="mt-8 italic text-center text-[10px] text-gray-400">
-                This invoice is electronically generated / هذه الفاتورة صادرة إلكترونياً
-            </p>
-        </footer>
+        </div>
+
+        <!-- TAB 2: TRAVEL LEDGER (HISAB) -->
+        <div id="tab-hisab" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                
+                <!-- Hisab Controls -->
+                <div class="p-4 border-b border-gray-100 bg-gray-50 no-print">
+                    <div class="flex flex-wrap justify-between items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="plane" class="text-blue-600 w-5 h-5"></i> Ticketing Ledger</h2>
+                            <div class="h-6 w-px bg-gray-300 mx-2"></div>
+                            <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Month:</span>
+                            <input type="month" id="hisab-month-filter" class="p-1 border border-gray-300 rounded text-sm font-bold text-gray-800" onchange="loadHisab()">
+                        </div>
+                        <div class="flex gap-2">
+                             <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-2 rounded text-xs font-bold hover:bg-gray-700 flex items-center gap-1">
+                                <i data-lucide="printer" class="w-3 h-3"></i> Print
+                            </button>
+                             <button onclick="exportHisab('month')" class="bg-green-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-1">
+                                <i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Export Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add/Update Entry Form -->
+                <div class="px-6 py-4 bg-white border-b border-gray-200 no-print">
+                    <form onsubmit="event.preventDefault(); addHisabEntry();" class="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-2 items-end">
+                        <input type="hidden" id="h-edit-id"> 
+                        
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1">DATE</label>
+                            <input type="date" id="h-date" class="w-full p-1.5 border border-gray-300 rounded text-xs bg-yellow-50" title="Leave empty for Today's Date">
+                        </div>
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1">NAME</label>
+                            <input type="text" id="h-name" placeholder="Passenger Name" class="w-full p-1.5 border border-gray-300 rounded text-xs" required>
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1">PNR</label>
+                            <input type="text" id="h-pnr" placeholder="PNR" class="w-full p-1.5 border border-gray-300 rounded text-xs">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1">FLIGHT DATE</label>
+                            <input type="date" id="h-fdate" class="w-full p-1.5 border border-gray-300 rounded text-xs" title="Leave empty to use Entry Date">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1">SECTOR</label>
+                            <input type="text" id="h-sector" placeholder="DXB-MCT" class="w-full p-1.5 border border-gray-300 rounded text-xs">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-bold text-gray-500 mb-1">PHONE</label>
+                            <input type="text" id="h-phone" placeholder="968..." class="w-full p-1.5 border border-gray-300 rounded text-xs">
+                        </div>
+                        <!-- Financials -->
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-bold text-red-600 mb-1">NET (COST)</label>
+                            <input type="number" step="0.001" id="h-net" placeholder="0.000" class="w-full p-1.5 border border-red-200 rounded text-xs focus:border-red-500" required>
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-bold text-green-600 mb-1">SELL (SALE)</label>
+                            <input type="number" step="0.001" id="h-sell" placeholder="0.000" class="w-full p-1.5 border border-green-200 rounded text-xs focus:border-green-500" required>
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block text-[10px] font-bold text-orange-500 mb-1">DUE</label>
+                            <input type="number" step="0.001" id="h-due" placeholder="0.000" class="w-full p-1.5 border border-orange-200 rounded text-xs">
+                        </div>
+                        <div class="col-span-1 md:col-span-1 flex gap-1">
+                            <button type="submit" id="btn-add-update" class="flex-grow bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700 text-xs h-[30px] mt-4 shadow-sm transition-colors">ADD</button>
+                            <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="hidden bg-gray-200 text-gray-600 p-1.5 rounded font-bold hover:bg-gray-300 text-xs h-[30px] mt-4 w-8 flex items-center justify-center">
+                                <i data-lucide="x" class="w-3 h-3"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Spreadsheet Table -->
+                <div class="p-6 bg-white min-h-[500px]">
+                    <div class="text-center mb-4">
+                        <h1 class="text-xl font-bold text-gray-800 uppercase tracking-widest">Travel Agency Ledger</h1>
+                        <p class="text-sm text-gray-500" id="sheet-header-date">January 2026</p>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-0 mb-4 border border-gray-300 text-center text-xs font-bold bg-gray-50">
+                        <div class="p-2 border-r border-gray-300 text-red-700">Total Net (Cost): <span id="tot-net">0.000</span></div>
+                        <div class="p-2 border-r border-gray-300 text-green-700">Total Sell: <span id="tot-sell">0.000</span></div>
+                        <div class="p-2 border-r border-gray-300 text-blue-800">Total Profit: <span id="tot-profit">0.000</span></div>
+                        <div class="p-2 text-orange-600">Total Due: <span id="tot-due">0.000</span></div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="excel-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 8%">DATE</th>
+                                    <th style="width: 15%">NAME</th>
+                                    <th style="width: 8%">PNR</th>
+                                    <th style="width: 8%">FLIGHT DATE</th>
+                                    <th style="width: 8%">NET</th>
+                                    <th style="width: 8%">SELL</th>
+                                    <th style="width: 8%; background-color: #e0f2fe;">PROFIT</th>
+                                    <th style="width: 10%">SECTOR</th>
+                                    <th style="width: 10%">PHONE</th>
+                                    <th style="width: 8%; background-color: #fff7ed;">DUE</th>
+                                    <th class="no-print" style="width: 4%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="hisab-table-body" class="text-gray-700 font-mono"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: DUE & BANKING TRACKER -->
+        <div id="tab-due" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
+                <div class="p-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center no-print">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <i data-lucide="wallet" class="text-blue-600"></i> Due & Banking
+                    </h2>
+                    <div class="flex gap-2">
+                        <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
+                        <button id="btn-undo-due" onclick="undoDeleteDue()" class="hidden bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Undo</button>
+                        <button onclick="addDueRow('customer')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-700">+ Customer Due</button>
+                        <button onclick="addDueRow('payable')" class="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-red-700">+ My Payable</button>
+                        <button onclick="addDueRow('bank')" class="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-green-700">+ Bank Deposit</button>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 bg-white">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <p class="text-xs font-bold text-blue-600 uppercase">Customer Due (Receivable)</p>
+                        <p class="text-2xl font-black text-gray-800" id="due-total-receive">0.000</p>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <p class="text-xs font-bold text-red-600 uppercase">My Payables (Liability)</p>
+                        <p class="text-2xl font-black text-gray-800" id="due-total-pay">0.000</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                        <p class="text-xs font-bold text-green-600 uppercase">Total Bank Deposit</p>
+                        <p class="text-2xl font-black text-gray-800" id="due-total-bank">0.000</p>
+                    </div>
+                    <!-- New Net Balance Card -->
+                    <div class="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                        <p class="text-xs font-bold text-purple-600 uppercase">Projected Net Balance</p>
+                        <p class="text-2xl font-black text-gray-800" id="due-total-balance">0.000</p>
+                        <p class="text-[9px] text-purple-400 mt-1 uppercase tracking-wide">Due + Bank - Payables</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 p-6">
+                    <!-- SECTION 1: CUSTOMERS DUE TO ME -->
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b pb-1">Customer Dues (Receivables)</h3>
+                        <table class="excel-table w-full">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%">Customer Name</th>
+                                    <th style="width: 20%">Amount</th>
+                                    <th style="width: 20%">Due Date</th>
+                                    <th style="width: 20%">Status</th>
+                                    <th style="width: 10%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="due-table-customer"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- SECTION 2: MY PAYABLES -->
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b pb-1">My Payables (To Others)</h3>
+                        <table class="excel-table w-full">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%">Pay To (Name)</th>
+                                    <th style="width: 20%">Amount</th>
+                                    <th style="width: 20%">Pay Date</th>
+                                    <th style="width: 20%">Status</th>
+                                    <th style="width: 10%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="due-table-payable"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- SECTION 3: BANK DEPOSITS -->
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b pb-1">Bank Deposits</h3>
+                        <table class="excel-table w-full">
+                            <thead>
+                                <tr>
+                                    <th style="width: 20%">Date</th>
+                                    <th style="width: 40%">Bank Name / Details</th>
+                                    <th style="width: 30%">Amount</th>
+                                    <th style="width: 10%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="due-table-bank"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: INVOICE GENERATOR -->
+        <div id="tab-invoice" class="tab-content">
+            <!-- Controls -->
+            <div class="controls bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 justify-between items-center mb-6 max-w-[210mm] mx-auto">
+                <div class="flex items-center gap-2 flex-grow max-w-md">
+                    <input type="number" id="search-input" placeholder="Search Invoice No" class="flex-grow p-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:outline-none text-sm">
+                    <button onclick="searchInvoice()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">Search</button>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="generateNewInvoice()" class="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-200 font-bold border border-gray-300"><i data-lucide="plus" class="w-4 h-4"></i> New</button>
+                    <button onclick="saveInvoice()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-bold shadow-sm"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
+                    <button onclick="window.print()" class="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 font-bold shadow-sm"><i data-lucide="printer" class="w-4 h-4"></i> Print</button>
+                </div>
+                <div class="w-full flex justify-end mt-2 items-center gap-2">
+                    <label class="flex items-center gap-2 cursor-pointer hover:text-green-600 font-bold text-sm text-gray-500">
+                        <input type="checkbox" id="paid-toggle" class="rounded text-green-600 focus:ring-green-500">
+                        <span>Mark as PAID</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- INVOICE PAPER -->
+            <div class="invoice-paper" id="invoice-view">
+                <div id="paid-watermark" class="paid-seal"><div class="text-5xl font-black uppercase tracking-wider">PAID</div><div class="text-3xl font-bold arabic-text mt-0">مدفوع</div></div>
+                
+                <header class="flex flex-col md:flex-row justify-between items-center pb-6 border-b relative z-10 gap-4">
+                    <div class="text-center md:text-left w-full md:w-1/3 pt-2">
+                        <h1 class="font-bold text-gray-800 text-lg uppercase leading-tight mb-1">HOLIDAY TRAVELS</h1>
+                        <p class="text-xs text-gray-600">NEAR PAK MOSJID SALALAH</p>
+                        <p class="text-xs text-gray-600">Salalah, Sultanate of Oman</p>
+                        <p class="text-xs text-gray-600 mt-1"><strong>Phone:</strong> 78594007</p>
+                        <p class="text-xs text-gray-600"><strong>Email:</strong> HOLIDAYTRAVELS.OM@GMAIL.COM</p>
+                    </div>
+                    <div class="text-center w-full md:w-1/3 flex justify-center">
+                        <img src="LOGO.jpg" onerror="this.style.display='none'" alt="Logo" class="h-28 w-auto object-contain mx-auto">
+                    </div>
+                    <div class="text-center md:text-right w-full md:w-1/3 pt-2 arabic-text">
+                        <h1 contenteditable="true" class="editable font-bold text-gray-800 text-xl leading-tight mb-1">سفريات هوليداي</h1>
+                        <p contenteditable="true" class="editable text-sm text-gray-600">بالقرب من المسجد الباكستاني</p>
+                        <p contenteditable="true" class="editable text-sm text-gray-600">صلالة، سلطنة عمان</p>
+                        <p class="text-sm text-gray-600 mt-1"><strong class="mx-1">هاتف:</strong><span class="font-sans" contenteditable="true">78594007</span></p>
+                        <p class="text-sm text-gray-600"><strong class="mx-1">بريد إلكتروني:</strong><span class="font-sans text-xs" contenteditable="true">HOLIDAYTRAVELS.OM@GMAIL.COM</span></p>
+                    </div>
+                </header>
+
+                <div class="flex justify-between items-center mt-6 mb-6">
+                    <div class="text-left"><div class="flex flex-col"><span class="text-gray-500 text-xs font-bold uppercase">Invoice No</span><span id="invoice-number" class="text-xl font-bold text-gray-800 font-mono">9877</span></div></div>
+                    <div class="text-center"><h2 class="text-3xl font-bold uppercase text-gray-800 tracking-wide">INVOICE <span class="arabic-text font-normal text-2xl">فاتورة</span></h2></div>
+                    <div class="text-right"><div class="flex flex-col"><span class="text-gray-500 text-xs font-bold uppercase">Date</span><span id="invoice-date" contenteditable="true" class="editable text-xl font-bold text-gray-800"></span></div></div>
+                </div>
+
+                <section class="mb-8 bg-gray-50 rounded-lg p-4 border border-gray-100">
+                    <div class="flex justify-between items-end mb-2"><h3 class="text-xs font-bold uppercase text-gray-500 tracking-wider">Billed To</h3><h3 class="text-sm font-bold text-gray-500 arabic-text">فاتورة إلى</h3></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-xs text-gray-400">Customer Name</label><div contenteditable="true" id="customer-name" class="editable text-lg font-bold text-gray-800 w-full p-1" data-placeholder="Name">Customer Name</div></div>
+                        <div class="md:text-right"><label class="block text-xs text-gray-400">Phone</label><div contenteditable="true" id="customer-phone" class="editable text-gray-600 w-full p-1 font-sans" data-placeholder="Phone">Phone Number</div></div>
+                    </div>
+                </section>
+
+                <section class="flex-grow">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-gray-800 text-white">
+                                <th class="p-3 text-sm font-semibold uppercase tracking-wider w-3/4 rounded-tl-lg rounded-bl-lg"><div class="flex justify-between"><span>Item Description</span><span class="arabic-text font-normal">تفاصيل</span></div></th>
+                                <th class="p-3 text-right text-sm font-semibold uppercase tracking-wider w-1/4 rounded-tr-lg rounded-br-lg"><div class="flex flex-col items-end"><span>Amount (OMR)</span><span class="arabic-text text-xs text-gray-300">المبلغ</span></div></th>
+                                <th class="w-10 no-print bg-white"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-table-body"></tbody>
+                    </table>
+                    <button id="add-item-btn" onclick="addRow()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Add Item</button>
+                </section>
+
+                <section class="mt-8 flex justify-end">
+                    <div class="w-72">
+                        <div class="flex justify-between items-center py-2 border-b border-gray-200"><span class="text-gray-600 font-medium text-sm">Subtotal</span><span class="font-bold text-gray-800"><span id="subtotal">0.000</span></span></div>
+                        <div class="flex justify-between items-center py-3 bg-gray-100 px-4 rounded-lg mt-3 border border-gray-200"><span class="text-lg font-bold text-gray-800">Total</span><span class="text-xl font-bold text-blue-900"><span id="total">0.000</span> <span class="text-sm text-gray-500">OMR</span></span></div>
+                    </div>
+                </section>
+
+                <footer class="mt-12 pt-6 border-t border-gray-200 text-gray-500 text-sm">
+                    <div class="flex flex-col md:flex-row justify-between items-end">
+                        <div class="text-left space-y-1">
+                            <p class="text-xs uppercase font-bold text-gray-800">Company Reg Details</p>
+                            <p class="font-bold text-gray-700">Sajer Desert Rare Trading Company</p>
+                            <p class="font-bold text-gray-700 arabic-text">شركة صحراء ساجر للتجارة النادرة</p>
+                            <p><strong class="text-xs">CR No:</strong> <span class="font-mono">1588173</span></p>
+                        </div>
+                        <div class="mt-4 md:mt-0 flex flex-col items-center">
+                            <img src="WHATSAPP.jpg" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1200px-WhatsApp.svg.png'" alt="WhatsApp" class="w-16 h-16 object-contain mb-1">
+                            <p class="text-xs font-bold text-green-600">Contact Support</p>
+                        </div>
+                    </div>
+                    <p class="mt-8 italic text-center text-[10px] text-gray-400">This invoice is electronically generated / هذه الفاتورة صادرة إلكترونياً</p>
+                </footer>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // --- Configuration ---
         const STORAGE_PREFIX = 'holiday_inv_';
         const STORAGE_KEY_COUNTER = 'holidayTravelsInvoiceNum';
+        const STORAGE_HISAB = 'holiday_ledger_data';
+        const STORAGE_DUE = 'holiday_due_data';
         
-        // --- Icons ---
         lucide.createIcons();
 
-        // --- AUTHENTICATION LOGIC ---
+        // --- AUTHENTICATION ---
         const CORRECT_PASS = "96419161";
         const loginScreen = document.getElementById('login-screen');
         const passInput = document.getElementById('password-input');
-        const loginError = document.getElementById('login-error');
-
-        // Check if previously logged in this session
-        if (sessionStorage.getItem('invoice_authorized') === 'true') {
-            loginScreen.style.display = 'none';
-        }
+        
+        if (sessionStorage.getItem('invoice_authorized') === 'true' && loginScreen) { loginScreen.style.display = 'none'; }
 
         function attemptLogin() {
-            if (passInput.value === CORRECT_PASS) {
+            if (passInput && passInput.value === CORRECT_PASS) {
                 sessionStorage.setItem('invoice_authorized', 'true');
-                loginScreen.style.opacity = '0';
-                loginScreen.style.transition = 'opacity 0.5s ease';
-                setTimeout(() => {
-                    loginScreen.style.display = 'none';
-                }, 500);
+                if(loginScreen) loginScreen.style.display = 'none';
             } else {
-                loginError.classList.remove('hidden');
-                passInput.value = '';
-                passInput.focus();
-                passInput.classList.add('border-red-500');
+                const err = document.getElementById('login-error');
+                if(err) err.classList.remove('hidden');
+                if(passInput) passInput.value = '';
+            }
+        }
+        
+        if (passInput) {
+            passInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') attemptLogin(); });
+            passInput.focus();
+        }
+
+        // --- TABS ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            if(activeTab) activeTab.classList.add('active');
+            
+            // Reset buttons
+            document.querySelectorAll('.tabs-nav button').forEach(btn => {
+                btn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50";
+            });
+            
+            // Activate current button
+            const currentBtn = document.getElementById(`btn-tab-${tabName}`);
+            if(currentBtn) {
+                currentBtn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md";
+            }
+
+            if(tabName === 'hisab') loadHisab();
+            if(tabName === 'dashboard') updateDashboard();
+            if(tabName === 'due') loadDueData();
+            if(tabName === 'invoice') {
+                if(itemsTableBody && itemsTableBody.children.length === 0) addRow();
             }
         }
 
-        // Enter key support for login
-        passInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                attemptLogin();
-            }
-        });
-
-        // Focus on load
-        passInput.focus();
-
-        // --- Auto-Clear Logic for Customer Fields ---
-        function setupAutoClear(elementId, defaultText) {
-            const el = document.getElementById(elementId);
-            if (!el) return;
-
-            el.addEventListener('focus', function() {
-                if (this.innerText.trim() === defaultText) {
-                    this.innerText = '';
-                }
-            });
-
-            el.addEventListener('blur', function() {
-                if (this.innerText.trim() === '') {
-                    this.innerText = defaultText;
-                }
-            });
+        // --- INVOICE LOGIC ---
+        const invoiceNumberElement = document.getElementById('invoice-number');
+        
+        function setupAutoClear(id, defaultText) {
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.addEventListener('focus', () => { if(el.innerText.trim() === defaultText) el.innerText = ''; });
+            el.addEventListener('blur', () => { if(el.innerText.trim() === '') el.innerText = defaultText; });
         }
-
-        // Initialize auto-clear for customer fields
         setupAutoClear('customer-name', 'Customer Name');
         setupAutoClear('customer-phone', 'Phone Number');
 
-        // --- 1. Invoice Number Logic ---
-        const invoiceNumberElement = document.getElementById('invoice-number');
-
-        function setInvoiceNumberDisplay(num) {
-            invoiceNumberElement.textContent = String(num).padStart(4, '0');
+        function setInvoiceNumberDisplay(num) { 
+            if(invoiceNumberElement) invoiceNumberElement.textContent = String(num).padStart(4, '0'); 
         }
         
         function initializeInvoiceNumber() {
             let lastNum = localStorage.getItem(STORAGE_KEY_COUNTER);
-            if (!lastNum) {
-                lastNum = 9876;
-                localStorage.setItem(STORAGE_KEY_COUNTER, lastNum);
-            }
-            let nextNum = parseInt(lastNum, 10) + 1;
-            setInvoiceNumberDisplay(nextNum);
+            if (!lastNum) { lastNum = 9876; localStorage.setItem(STORAGE_KEY_COUNTER, lastNum); }
+            setInvoiceNumberDisplay(parseInt(lastNum, 10) + 1);
         }
 
-        // --- 2. Date Logic ---
+        // Initializes dates. Sets Invoice to Today. Sets Ledger to today/sticky.
         function setTodayDate() {
             const today = new Date();
-            const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-            document.getElementById('invoice-date').textContent = formattedDate;
+            const d = String(today.getDate()).padStart(2, '0');
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const y = today.getFullYear();
+            
+            const invDate = document.getElementById('invoice-date');
+            if(invDate) invDate.textContent = `${d}/${m}/${y}`;
+            
+            const monthStr = `${y}-${m}`;
+            const monthFilter = document.getElementById('hisab-month-filter');
+            if(monthFilter) monthFilter.value = monthStr;
+            
+            // Ledger Date defaults to today initially
+            const hDate = document.getElementById('h-date');
+            if(hDate) hDate.valueAsDate = today;
         }
 
-        // --- 3. Calculation Logic ---
+        // Specific function to reset ONLY the Invoice Date
+        function resetInvoiceDate() {
+            const today = new Date();
+            const d = String(today.getDate()).padStart(2, '0');
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const invDate = document.getElementById('invoice-date');
+            if(invDate) invDate.textContent = `${d}/${m}/${today.getFullYear()}`;
+        }
+
         const itemsTableBody = document.getElementById('items-table-body');
 
         const calculateTotal = () => {
             let subtotal = 0;
             document.querySelectorAll('.item-amount').forEach(el => {
-                const val = parseFloat(el.innerText.replace(/[^0-9.-]+/g,"")) || 0;
-                subtotal += val;
+                subtotal += parseFloat(el.innerText.replace(/[^0-9.-]+/g,"")) || 0;
             });
-
-            document.getElementById('subtotal').textContent = subtotal.toFixed(3);
-            document.getElementById('total').textContent = subtotal.toFixed(3);
+            const sub = document.getElementById('subtotal');
+            const tot = document.getElementById('total');
+            if(sub) sub.textContent = subtotal.toFixed(3);
+            if(tot) tot.textContent = subtotal.toFixed(3);
         };
 
-        // --- 4. Table Interactions ---
         window.addRow = (desc = "DHAKA TO SALALAH", price = "0.000") => {
+            if(!itemsTableBody) return;
             const newRow = document.createElement('tr');
             newRow.className = 'item-row border-b border-gray-100 hover:bg-gray-50';
             newRow.innerHTML = `
-                <td class="p-3 align-top">
-                    <div class="flex flex-col gap-1">
-                        <span contenteditable="true" class="item-desc editable w-full block font-medium text-gray-800" data-placeholder="Description">${desc}</span>
-                    </div>
-                </td>
-                <td class="p-3 align-top text-right">
-                    <span contenteditable="true" class="item-amount editable w-full block text-right font-mono text-lg text-gray-700">${price}</span>
-                </td>
-                <td class="p-3 text-center no-print align-middle">
-                    <button onclick="deleteRow(this)" class="delete-row text-red-400 hover:text-red-600 font-bold p-1 rounded hover:bg-red-50">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                </td>
+                <td class="p-3 align-top"><div class="flex flex-col gap-1"><span contenteditable="true" class="item-desc editable w-full block font-medium text-gray-800" data-placeholder="Description">${desc}</span></div></td>
+                <td class="p-3 align-top text-right"><span contenteditable="true" class="item-amount editable w-full block text-right font-mono text-lg text-gray-700">${price}</span></td>
+                <td class="p-3 text-center no-print align-middle"><button onclick="deleteRow(this)" class="delete-row text-red-400 hover:text-red-600 font-bold p-1 rounded hover:bg-red-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
             `;
             itemsTableBody.appendChild(newRow);
             lucide.createIcons();
             
-            // Add listeners
             const amountCell = newRow.querySelector('.item-amount');
             const descCell = newRow.querySelector('.item-desc');
-            
-            [amountCell, descCell].forEach(cell => {
-                cell.addEventListener('input', calculateTotal);
-            });
-
+            [amountCell, descCell].forEach(cell => cell.addEventListener('input', calculateTotal));
             amountCell.addEventListener('blur', (e) => {
                 const val = parseFloat(e.target.innerText.replace(/[^0-9.-]+/g,"")) || 0;
                 e.target.innerText = val.toFixed(3);
                 calculateTotal();
             });
-
-            // Auto-clear logic for placeholders
-            descCell.addEventListener('focus', function() {
-                if (this.innerText.includes("DHAKA TO SALALAH")) this.innerText = "";
-            });
-
+            descCell.addEventListener('focus', function() { if (this.innerText.includes("DHAKA TO SALALAH")) this.innerText = ""; });
             calculateTotal();
         };
         
-        window.deleteRow = (btn) => {
-            btn.closest('tr').remove();
-            calculateTotal();
-        };
+        window.deleteRow = (btn) => { btn.closest('tr').remove(); calculateTotal(); };
 
-        // --- 5. Save/Load/New Logic ---
         function showMessage(text, type = 'success') {
             const msg = document.getElementById('system-message');
+            if(!msg) return;
             msg.textContent = text;
             msg.className = type === 'error' ? 'text-red-500 font-bold' : 'text-blue-600 font-bold';
-            setTimeout(() => {
-                msg.textContent = 'Ready';
-                msg.className = 'font-medium';
-            }, 3000);
+            setTimeout(() => { msg.textContent = 'Ready'; msg.className = 'font-medium'; }, 3000);
         }
 
         function saveInvoice() {
+            if(!invoiceNumberElement) return;
             const id = parseInt(invoiceNumberElement.textContent, 10);
+            const dateStr = document.getElementById('invoice-date').innerText;
+            const custName = document.getElementById('customer-name').innerText;
+            const phone = document.getElementById('customer-phone').innerText;
             
-            // Get Items
             const items = [];
             document.querySelectorAll('.item-row').forEach(row => {
-                items.push({
-                    desc: row.querySelector('.item-desc').innerText,
-                    amount: row.querySelector('.item-amount').innerText
-                });
+                items.push({ desc: row.querySelector('.item-desc').innerText, amount: row.querySelector('.item-amount').innerText });
             });
 
+            const paidEl = document.getElementById('paid-toggle');
             const data = {
-                id: id,
-                date: document.getElementById('invoice-date').innerText,
-                customerName: document.getElementById('customer-name').innerText,
-                customerPhone: document.getElementById('customer-phone').innerText,
-                items: items,
-                paid: document.getElementById('paid-toggle').checked
+                id: id, date: dateStr, customerName: custName,
+                customerPhone: phone,
+                items: items, paid: paidEl ? paidEl.checked : false
             };
-
             localStorage.setItem(STORAGE_PREFIX + id, JSON.stringify(data));
             
-            // Update counter if this is a new high number
             let currentHigh = parseInt(localStorage.getItem(STORAGE_KEY_COUNTER) || 0, 10);
-            if (id > currentHigh) {
-                localStorage.setItem(STORAGE_KEY_COUNTER, id);
-            }
+            if (id > currentHigh) localStorage.setItem(STORAGE_KEY_COUNTER, id);
 
-            showMessage(`Invoice #${id} Saved Successfully!`);
+            // Auto-Add Invoice to Ledger (Uses Invoice Date)
+            const totEl = document.getElementById('total');
+            const totalAmount = totEl ? parseFloat(totEl.textContent) : 0;
+            if (totalAmount > 0) {
+                const parts = dateStr.split('/');
+                const isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                addHisabTransaction({
+                    date: isoDate,
+                    name: custName,
+                    pnr: '',
+                    flight_date: '',
+                    sector: items[0]?.desc || 'Invoice',
+                    phone: phone,
+                    net: 0, 
+                    sell: totalAmount,
+                    due: 0,
+                    invoiceId: id
+                });
+            }
+            showMessage(`Invoice #${id} Saved & Added to Ledger!`);
         }
 
         function searchInvoice() {
             const term = document.getElementById('search-input').value;
-            if (!term) return showMessage('Enter a number / أدخل رقم', 'error');
-
+            if (!term) return showMessage('Enter a number', 'error');
             const dataStr = localStorage.getItem(STORAGE_PREFIX + parseInt(term, 10));
-            if (!dataStr) return showMessage('Invoice Not Found / غير موجود', 'error');
-
+            if (!dataStr) return showMessage('Not Found', 'error');
             const data = JSON.parse(dataStr);
-            
-            // Populate
             setInvoiceNumberDisplay(data.id);
             document.getElementById('invoice-date').innerText = data.date;
             document.getElementById('customer-name').innerText = data.customerName;
             document.getElementById('customer-phone').innerText = data.customerPhone;
-            document.getElementById('paid-toggle').checked = data.paid;
+            const paidEl = document.getElementById('paid-toggle');
+            if(paidEl) paidEl.checked = data.paid;
             togglePaidStamp();
-
-            // Items
             itemsTableBody.innerHTML = '';
             data.items.forEach(item => addRow(item.desc, item.amount));
-            
             showMessage(`Invoice #${term} Loaded`);
         }
 
         function generateNewInvoice() {
             let lastNum = localStorage.getItem(STORAGE_KEY_COUNTER) || 9876;
-            let nextNum = parseInt(lastNum, 10) + 1;
-            
-            setInvoiceNumberDisplay(nextNum);
-            setTodayDate();
-            
-            // Reset fields
+            setInvoiceNumberDisplay(parseInt(lastNum, 10) + 1);
+            resetInvoiceDate(); // Reset Date to Today for new invoices (OLD BEHAVIOR KEPT)
             document.getElementById('customer-name').innerText = "Customer Name";
             document.getElementById('customer-phone').innerText = "Phone Number";
-            document.getElementById('paid-toggle').checked = false;
+            const paidEl = document.getElementById('paid-toggle');
+            if(paidEl) paidEl.checked = false;
             togglePaidStamp();
             document.getElementById('search-input').value = '';
-
-            // Reset table
-            itemsTableBody.innerHTML = '';
+            if(itemsTableBody) itemsTableBody.innerHTML = '';
             addRow("DHAKA TO SALALAH", "0.000");
-            
             showMessage('New Invoice Created');
         }
 
-        // --- 6. Paid Stamp Toggle ---
         function togglePaidStamp() {
-            const isPaid = document.getElementById('paid-toggle').checked;
+            const paidEl = document.getElementById('paid-toggle');
             const stamp = document.getElementById('paid-watermark');
-            if (isPaid) stamp.classList.add('is-visible');
-            else stamp.classList.remove('is-visible');
+            if (paidEl && paidEl.checked) {
+                if(stamp) stamp.classList.add('is-visible');
+            } else {
+                if(stamp) stamp.classList.remove('is-visible');
+            }
+        }
+        const paidToggle = document.getElementById('paid-toggle');
+        if(paidToggle) paidToggle.addEventListener('change', togglePaidStamp);
+
+        // --- LEDGER LOGIC ---
+        function getHisabData() {
+            const raw = localStorage.getItem(STORAGE_HISAB);
+            return raw ? JSON.parse(raw) : [];
         }
 
-        document.getElementById('paid-toggle').addEventListener('change', togglePaidStamp);
+        function updateHisabTransaction(id, updatedEntry) {
+            const data = getHisabData();
+            const index = data.findIndex(e => e.id === parseInt(id));
+            if (index !== -1) {
+                data[index] = { ...data[index], ...updatedEntry }; 
+                localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
+                loadHisab();
+                cancelEdit(); 
+            }
+        }
 
-        // --- 7. Backup/Restore ---
+        function addHisabTransaction(entry) {
+            const data = getHisabData();
+            if(entry.invoiceId) {
+                const exists = data.findIndex(e => e.invoiceId === entry.invoiceId);
+                if(exists > -1) {
+                    const old = data[exists];
+                    entry.net = old.net > 0 ? old.net : entry.net; 
+                    data[exists] = { ...old, ...entry, id: old.id };
+                } else {
+                    entry.id = Date.now();
+                    data.push(entry);
+                }
+            } else {
+                entry.id = Date.now();
+                data.push(entry);
+            }
+            localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
+            loadHisab();
+        }
+
+        function addHisabEntry() {
+            let dateEl = document.getElementById('h-date');
+            let date = dateEl.value;
+
+            // IF DATE IS EMPTY -> USE TODAY
+            if (!date) {
+                const today = new Date();
+                const d = String(today.getDate()).padStart(2, '0');
+                const m = String(today.getMonth() + 1).padStart(2, '0');
+                const y = today.getFullYear();
+                date = `${y}-${m}-${d}`;
+                dateEl.value = date;
+            }
+
+            const name = document.getElementById('h-name').value;
+            const pnr = document.getElementById('h-pnr').value;
+            // AUTO FILL FLIGHT DATE WITH ENTRY DATE IF EMPTY
+            const fdate = document.getElementById('h-fdate').value || date;
+            const sector = document.getElementById('h-sector').value;
+            const phone = document.getElementById('h-phone').value;
+            const net = parseFloat(document.getElementById('h-net').value) || 0;
+            const sell = parseFloat(document.getElementById('h-sell').value) || 0;
+            const due = parseFloat(document.getElementById('h-due').value) || 0;
+
+            if(!name) return alert('Name is required');
+
+            const entryData = {
+                date: date, name: name, pnr: pnr, flight_date: fdate,
+                sector: sector, phone: phone, net: net, sell: sell, due: due
+            };
+
+            const editId = document.getElementById('h-edit-id').value;
+            
+            if (editId) {
+                updateHisabTransaction(editId, entryData);
+            } else {
+                addHisabTransaction({ ...entryData, invoiceId: null });
+                // Reset fields EXCEPT Date (Sticky Date)
+                ['h-name','h-pnr','h-fdate','h-sector','h-phone','h-net','h-sell','h-due'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('h-name').focus();
+            }
+        }
+
+        function generateInvoiceFromLedger(id) {
+            event.stopPropagation();
+            const data = getHisabData().find(e => e.id === id);
+            if (!data) return alert("Transaction not found");
+
+            switchTab('invoice');
+
+            if (data.date) {
+                const parts = data.date.split('-');
+                if(parts.length === 3) {
+                    const invDate = document.getElementById('invoice-date');
+                    if(invDate) invDate.textContent = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+            }
+            
+            document.getElementById('customer-name').innerText = data.name || "Customer Name";
+            document.getElementById('customer-phone').innerText = data.phone || "";
+
+            const tbody = document.getElementById('items-table-body');
+            if(tbody) tbody.innerHTML = ''; 
+
+            let desc = "Air Ticket";
+            if (data.sector) desc += ` / ${data.sector}`;
+            if (data.pnr) desc += ` (PNR: ${data.pnr})`;
+            if (data.flight_date) desc += ` - Travel Date: ${data.flight_date}`;
+
+            addRow(desc, data.sell.toFixed(3));
+            showMessage("Invoice Generated from Ledger!");
+        }
+
+        function editRow(id) {
+            const data = getHisabData().find(e => e.id === id);
+            if(!data) return;
+
+            document.getElementById('h-date').value = data.date;
+            document.getElementById('h-name').value = data.name;
+            document.getElementById('h-pnr').value = data.pnr || '';
+            document.getElementById('h-fdate').value = data.flight_date || '';
+            document.getElementById('h-sector').value = data.sector || '';
+            document.getElementById('h-phone').value = data.phone || '';
+            document.getElementById('h-net').value = data.net;
+            document.getElementById('h-sell').value = data.sell;
+            document.getElementById('h-due').value = data.due || 0;
+
+            document.getElementById('h-edit-id').value = id;
+            
+            const btn = document.getElementById('btn-add-update');
+            btn.textContent = "UPDATE";
+            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            btn.classList.add('bg-orange-500', 'hover:bg-orange-600');
+            
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+            
+            document.querySelectorAll('.excel-table tr').forEach(r => r.classList.remove('row-selected'));
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            if(row) row.classList.add('row-selected');
+            
+            const form = document.querySelector('.px-6.py-4');
+            if(form) form.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            document.getElementById('h-edit-id').value = '';
+            
+            const btn = document.getElementById('btn-add-update');
+            btn.textContent = "ADD";
+            btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            btn.classList.remove('bg-orange-500', 'hover:bg-orange-600');
+            
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            document.querySelectorAll('.excel-table tr').forEach(r => r.classList.remove('row-selected'));
+            
+            // Clear inputs BUT KEEP DATE
+            ['h-name','h-pnr','h-fdate','h-sector','h-phone','h-net','h-sell','h-due'].forEach(id => document.getElementById(id).value = '');
+        }
+
+        function deleteHisabEntry(id) {
+            event.stopPropagation();
+            if(!confirm('Delete this entry?')) return;
+            
+            const data = getHisabData().filter(e => e.id !== id);
+            localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
+            
+            if(document.getElementById('h-edit-id').value == id) cancelEdit();
+            
+            loadHisab();
+        }
+
+        function loadHisab() {
+            const filterEl = document.getElementById('hisab-month-filter');
+            if(!filterEl) return;
+            const selectedMonth = filterEl.value;
+            const [y, m] = selectedMonth.split('-');
+            const dateObj = new Date(parseInt(y), parseInt(m)-1);
+            
+            const headerDate = document.getElementById('sheet-header-date');
+            if(headerDate) headerDate.textContent = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            const allData = getHisabData();
+            const data = allData.filter(e => e.date.startsWith(selectedMonth));
+            
+            data.sort((a, b) => a.date.localeCompare(b.date));
+
+            const tbody = document.getElementById('hisab-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            let tNet = 0, tSell = 0, tProfit = 0, tDue = 0;
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" class="p-8 text-center text-gray-400 italic">No transactions found for this month.</td></tr>';
+            } else {
+                data.forEach(item => {
+                    const profit = item.sell - item.net;
+                    tNet += item.net;
+                    tSell += item.sell;
+                    tProfit += profit;
+                    tDue += (item.due || 0);
+
+                    const row = document.createElement('tr');
+                    row.setAttribute('data-id', item.id);
+                    row.onclick = () => editRow(item.id); 
+                    
+                    const displayDate = new Date(item.date).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
+                    const fDateDisplay = item.flight_date ? new Date(item.flight_date).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) : '-';
+
+                    row.innerHTML = `
+                        <td class="text-center">${displayDate}</td>
+                        <td class="font-bold text-gray-700" title="${item.name}">${item.name}</td>
+                        <td class="text-center text-xs font-mono">${item.pnr || '-'}</td>
+                        <td class="text-center text-xs">${fDateDisplay}</td>
+                        <td class="text-right text-red-600">${item.net.toFixed(3)}</td>
+                        <td class="text-right text-green-700 font-bold">${item.sell.toFixed(3)}</td>
+                        <td class="text-right text-blue-800 bg-blue-50 font-bold">${profit.toFixed(3)}</td>
+                        <td class="text-xs text-center">${item.sector || '-'}</td>
+                        <td class="text-xs text-center">${item.phone || '-'}</td>
+                        <td class="text-right text-orange-600 font-bold bg-orange-50">${(item.due || 0).toFixed(3)}</td>
+                        <td class="text-center no-print flex gap-1 justify-center items-center h-full">
+                            <button onclick="generateInvoiceFromLedger(${item.id})" class="text-blue-500 hover:text-blue-700 p-1" title="Generate Invoice"><i data-lucide="file-text" class="w-3 h-3"></i></button>
+                            <button onclick="deleteHisabEntry(${item.id})" class="text-gray-400 hover:text-red-500 p-1" title="Delete"><i data-lucide="x" class="w-3 h-3"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            const tNetEl = document.getElementById('tot-net'); if(tNetEl) tNetEl.textContent = tNet.toFixed(3);
+            const tSellEl = document.getElementById('tot-sell'); if(tSellEl) tSellEl.textContent = tSell.toFixed(3);
+            const tProfitEl = document.getElementById('tot-profit'); if(tProfitEl) tProfitEl.textContent = tProfit.toFixed(3);
+            const tDueEl = document.getElementById('tot-due'); if(tDueEl) tDueEl.textContent = tDue.toFixed(3);
+            
+            lucide.createIcons();
+        }
+
+        function exportHisab(mode = 'month') {
+            const selectedMonth = document.getElementById('hisab-month-filter').value;
+            let data;
+            let filename;
+
+            if (mode === 'all') {
+                data = getHisabData();
+                filename = `HolidayTravels_Ledger_Full.csv`;
+            } else {
+                data = getHisabData().filter(e => e.date.startsWith(selectedMonth));
+                filename = `Ledger_${selectedMonth}.csv`;
+            }
+            
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Date,Name,PNR,FlightDate,Sector,Phone,Net(Cost),Sell,Profit,Due\n";
+
+            data.sort((a, b) => a.date.localeCompare(b.date));
+
+            data.forEach(e => {
+                const profit = e.sell - e.net;
+                const safeName = e.name.replace(/,/g, ' '); 
+                const safePnr = (e.pnr || '').replace(/,/g, ' ');
+                csvContent += `${e.date},${safeName},${safePnr},${e.flight_date || ''},${e.sector || ''},${e.phone || ''},${e.net},${e.sell},${profit},${e.due || 0}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+        }
+
+        // --- DUE & BANKING LOGIC ---
+        function getDueData() {
+            const raw = localStorage.getItem(STORAGE_DUE);
+            return raw ? JSON.parse(raw) : [];
+        }
+
+        function addDueRow(type) {
+            const data = getDueData();
+            const newItem = {
+                id: Date.now(),
+                type: type, // 'customer', 'payable', 'bank'
+                name: type === 'bank' ? '' : 'Name',
+                bankName: type === 'bank' ? 'Bank Name' : '',
+                amount: 0,
+                date: new Date().toISOString().split('T')[0],
+                status: 'Pending'
+            };
+            data.push(newItem);
+            localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
+            loadDueData();
+        }
+
+        function updateDueItem(id, field, value) {
+            const data = getDueData();
+            const index = data.findIndex(e => e.id === id);
+            if(index !== -1) {
+                data[index][field] = value;
+                localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
+                loadDueData(); // Refresh totals
+            }
+        }
+
+        let lastDeletedDue = null;
+
+        function deleteDueItem(id) {
+            if(!confirm('Delete this item?')) return;
+            const data = getDueData();
+            const itemIndex = data.findIndex(e => e.id === id);
+            if (itemIndex > -1) {
+                lastDeletedDue = data[itemIndex]; // Save for Undo
+                data.splice(itemIndex, 1);
+                localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
+                loadDueData();
+                
+                // Show Undo Button logic
+                const btn = document.getElementById('btn-undo-due');
+                if(btn) {
+                    btn.classList.remove('hidden');
+                    btn.innerHTML = `<i data-lucide="rotate-ccw" class="w-3 h-3"></i> Undo Delete`;
+                    // Auto hide after 8 seconds
+                    setTimeout(() => { 
+                        btn.classList.add('hidden'); 
+                        lastDeletedDue = null; 
+                    }, 8000);
+                }
+            }
+        }
+
+        function undoDeleteDue() {
+            if (!lastDeletedDue) return;
+            const data = getDueData();
+            data.push(lastDeletedDue);
+            localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
+            loadDueData();
+            
+            // Hide button
+            const btn = document.getElementById('btn-undo-due');
+            if(btn) btn.classList.add('hidden');
+            lastDeletedDue = null;
+        }
+
+        function loadDueData() {
+            const data = getDueData();
+            
+            const custContainer = document.getElementById('due-table-customer');
+            const payContainer = document.getElementById('due-table-payable');
+            const bankContainer = document.getElementById('due-table-bank');
+            
+            if(custContainer) custContainer.innerHTML = '';
+            if(payContainer) payContainer.innerHTML = '';
+            if(bankContainer) bankContainer.innerHTML = '';
+
+            let totalReceive = 0, totalPay = 0, totalBank = 0;
+
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                const amt = parseFloat(item.amount) || 0;
+
+                if (item.type === 'customer') {
+                    if (item.status === 'Pending') totalReceive += amt;
+                    row.innerHTML = `
+                        <td><input type="text" class="w-full p-1 border rounded" value="${item.name}" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
+                        <td><input type="number" step="0.001" class="w-full p-1 border rounded" value="${item.amount}" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
+                        <td><input type="date" class="w-full p-1 border rounded" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
+                        <td>
+                            <select class="w-full p-1 border rounded ${item.status === 'Paid' ? 'text-green-600 font-bold' : 'text-orange-600'}" onchange="updateDueItem(${item.id}, 'status', this.value)">
+                                <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                <option value="Paid" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
+                            </select>
+                        </td>
+                        <td class="text-center"><button onclick="deleteDueItem(${item.id})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                    `;
+                    if(custContainer) custContainer.appendChild(row);
+                } else if (item.type === 'payable') {
+                    if (item.status === 'Pending') totalPay += amt;
+                    row.innerHTML = `
+                        <td><input type="text" class="w-full p-1 border rounded" value="${item.name}" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
+                        <td><input type="number" step="0.001" class="w-full p-1 border rounded" value="${item.amount}" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
+                        <td><input type="date" class="w-full p-1 border rounded" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
+                        <td>
+                            <select class="w-full p-1 border rounded ${item.status === 'Paid' ? 'text-green-600 font-bold' : 'text-red-600'}" onchange="updateDueItem(${item.id}, 'status', this.value)">
+                                <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                                <option value="Paid" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
+                            </select>
+                        </td>
+                        <td class="text-center"><button onclick="deleteDueItem(${item.id})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                    `;
+                    if(payContainer) payContainer.appendChild(row);
+                } else if (item.type === 'bank') {
+                    totalBank += amt;
+                    row.innerHTML = `
+                        <td><input type="date" class="w-full p-1 border rounded" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
+                        <td><input type="text" class="w-full p-1 border rounded" value="${item.bankName}" placeholder="Bank Name" onchange="updateDueItem(${item.id}, 'bankName', this.value)"></td>
+                        <td><input type="number" step="0.001" class="w-full p-1 border rounded text-green-700 font-bold" value="${item.amount}" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
+                        <td class="text-center"><button onclick="deleteDueItem(${item.id})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                    `;
+                    if(bankContainer) bankContainer.appendChild(row);
+                }
+            });
+
+            const tReceive = document.getElementById('due-total-receive'); if(tReceive) tReceive.textContent = totalReceive.toFixed(3);
+            const tPay = document.getElementById('due-total-pay'); if(tPay) tPay.textContent = totalPay.toFixed(3);
+            const tBank = document.getElementById('due-total-bank'); if(tBank) tBank.textContent = totalBank.toFixed(3);
+            
+            // Calc Balance
+            const netBalance = (totalReceive + totalBank) - totalPay;
+            const balEl = document.getElementById('due-total-balance');
+            if(balEl) {
+                balEl.textContent = netBalance.toFixed(3);
+                balEl.className = `text-2xl font-black ${netBalance >= 0 ? 'text-gray-800' : 'text-red-600'}`;
+            }
+            
+            lucide.createIcons();
+        }
+
+        // --- DASHBOARD LOGIC ---
+        function updateDashboard() {
+            const data = getHisabData();
+            
+            // 1. Calculate Aggregates per Month
+            const monthlyStats = {};
+            let yearSell = 0, yearProfit = 0, totalDue = 0;
+
+            data.forEach(item => {
+                const monthKey = item.date.substring(0, 7); // "YYYY-MM"
+                const profit = item.sell - item.net;
+                
+                if (!monthlyStats[monthKey]) {
+                    monthlyStats[monthKey] = { sell: 0, net: 0, profit: 0 };
+                }
+                
+                monthlyStats[monthKey].sell += item.sell;
+                monthlyStats[monthKey].net += item.net;
+                monthlyStats[monthKey].profit += profit;
+                
+                yearSell += item.sell;
+                yearProfit += profit;
+                totalDue += (item.due || 0);
+            });
+
+            // 2. Sort Months
+            const sortedMonths = Object.keys(monthlyStats).sort();
+            
+            // 3. Prepare Chart Data
+            const labels = sortedMonths; // e.g., ["2026-01", "2026-02"]
+            const salesData = sortedMonths.map(m => monthlyStats[m].sell);
+            const netData = sortedMonths.map(m => monthlyStats[m].net);
+            const profitData = sortedMonths.map(m => monthlyStats[m].profit);
+
+            // 4. Update Stats Cards
+            document.getElementById('dash-total-sell').textContent = yearSell.toFixed(3);
+            document.getElementById('dash-total-profit').textContent = yearProfit.toFixed(3);
+            document.getElementById('dash-total-due').textContent = totalDue.toFixed(3);
+
+            // 5. Render/Update Charts
+            renderSalesChart(labels, salesData, netData);
+            renderProfitChart(labels, profitData);
+        }
+
+        let salesChartInstance = null;
+        let profitChartInstance = null;
+
+        function renderSalesChart(labels, sales, net) {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            if (salesChartInstance) salesChartInstance.destroy();
+
+            salesChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Total Sell (Sales)',
+                            data: sales,
+                            backgroundColor: 'rgba(34, 197, 94, 0.6)', // Green
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Total Net (Cost)',
+                            data: net,
+                            backgroundColor: 'rgba(239, 68, 68, 0.6)', // Red
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function renderProfitChart(labels, profit) {
+            const ctx = document.getElementById('profitChart').getContext('2d');
+            if (profitChartInstance) profitChartInstance.destroy();
+
+            profitChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Net Profit',
+                        data: profit,
+                        borderColor: 'rgba(37, 99, 235, 1)', // Blue
+                        backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
         window.backupData = () => {
             const data = {};
+            // Loop through all local storage
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key.startsWith(STORAGE_PREFIX) || key === STORAGE_KEY_COUNTER) {
+                // Backup specific app keys + any key starting with holiday_
+                if (key.startsWith('holiday_') || key === 'holidayTravelsInvoiceNum') {
                     data[key] = localStorage.getItem(key);
                 }
             }
@@ -633,7 +1243,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `HolidayTravels_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `HolidayTravels_FullBackup_${new Date().toISOString().slice(0,10)}.json`;
             a.click();
         };
 
@@ -645,18 +1255,16 @@
                 try {
                     const data = JSON.parse(e.target.result);
                     Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
-                    showMessage('Data Restored Successfully!');
-                    setTimeout(() => location.reload(), 1000);
-                } catch(e) { showMessage('Invalid File', 'error'); }
+                    alert('Data Restored Successfully!');
+                    location.reload();
+                } catch(e) { alert('Invalid File'); }
             };
             reader.readAsText(file);
         };
 
-        // --- Init ---
         setTodayDate();
         initializeInvoiceNumber();
-        if(itemsTableBody.children.length === 0) addRow();
-
+        if(itemsTableBody && itemsTableBody.children.length === 0) addRow();
     </script>
 </body>
 </html>
