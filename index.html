@@ -85,12 +85,14 @@
         .excel-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
         .row-selected { background-color: #fff7ed !important; border-left: 3px solid #f97316; }
         body.dark .row-selected { background-color: rgba(249, 115, 22, 0.2) !important; }
+        
+        .print-header { display: none; }
 
         /* Print Settings */
         @media print {
             @page { margin: 0; size: A4 landscape; } 
             body { background: white !important; color: black !important; margin: 0; padding: 0; }
-            .no-print, .controls, #login-screen, .tabs-nav, #global-header { display: none !important; }
+            .no-print, .controls, #login-screen, .tabs-nav, #global-header, .add-row-btn { display: none !important; }
             
             .tab-content { display: none !important; }
             .tab-content.active { display: block !important; }
@@ -105,6 +107,16 @@
             #tab-expense.active { width: 100%; }
             #tab-notes.active { width: 100%; }
             
+            /* Due Tab Print Styling (Statement Look) */
+            #tab-due.active .print-header { display: flex !important; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 20px; margin-bottom: 20px; }
+            #tab-due.active .print-header img { height: 80px; }
+            #tab-due.active .print-header .company-details { text-align: right; }
+            #tab-due.active .grid { display: block !important; } /* Un-grid the stats */
+            #tab-due.active .grid > div { margin-bottom: 15px; border: 1px solid #ddd; page-break-inside: avoid; } /* Stack stats */
+            #tab-due.active .grid-cols-1 { display: block !important; } /* Un-grid the main content */
+            #tab-due.active #due-active-view > div { margin-bottom: 30px; page-break-inside: avoid; } /* Stack tables */
+            
+            /* Clean up table for statement */
             .excel-table th, .excel-table td { border: 1px solid #000 !important; font-size: 10px; color: black !important; background: white !important; } 
             
             #tab-dashboard.active .chart-container { page-break-inside: avoid; }
@@ -135,9 +147,11 @@
         <!-- GLOBAL HEADER & BACKUP CONTROLS -->
         <div id="global-header" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
+                <!-- Static Header Logo (No Upload) -->
                 <img id="header-logo-img" src="LOGO.png" alt="Holiday Travels" class="h-12 w-auto object-contain">
             </div>
             <div class="flex gap-2 w-full md:w-auto items-center">
+                <!-- Dark Mode Toggle -->
                 <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 transition-colors mr-2" title="Toggle Dark Mode">
                     <i data-lucide="moon" class="w-5 h-5 text-gray-600 dark:hidden"></i>
                     <i data-lucide="sun" class="w-5 h-5 text-yellow-400 hidden dark:block"></i>
@@ -161,7 +175,7 @@
             <button onclick="switchTab('hisab')" id="btn-tab-hisab" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
                 <i data-lucide="plane" class="w-4 h-4"></i> Ticketing
             </button>
-            <button onclick="switchTab('notes')" id="btn-tab-notes" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
+             <button onclick="switchTab('notes')" id="btn-tab-notes" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
                 <i data-lucide="clipboard-list" class="w-4 h-4"></i> Notes & Check-in
             </button>
             <button onclick="switchTab('due')" id="btn-tab-due" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
@@ -182,6 +196,12 @@
                     <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="bar-chart-3" class="text-blue-600"></i> Sales Dashboard</h2>
                     <p class="text-sm text-gray-500">Yearly Performance Overview</p>
                 </div>
+
+                <!-- NEW: URGENT CHECK-IN ALERTS -->
+                <div id="dashboard-alerts" class="p-6 pb-0 hidden">
+                    <!-- Injected via JS -->
+                </div>
+                <!-- END NEW SECTION -->
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white">
                     <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl border border-green-200 shadow-sm">
@@ -291,7 +311,7 @@
             </div>
         </div>
 
-        <!-- TAB 6: NOTES & CHECK-IN (NEW) -->
+        <!-- TAB 3: NOTES & CHECK-IN -->
         <div id="tab-notes" class="tab-content">
              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[290mm] mx-auto">
                  
@@ -363,18 +383,30 @@
              </div>
         </div>
 
-        <!-- TAB 3: DUE & BANKING TRACKER -->
+        <!-- TAB 4: DUE & BANKING TRACKER -->
         <div id="tab-due" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
+                
+                <!-- PRINT HEADER (Hidden on Screen, Visible on Print) -->
+                <div class="print-header hidden">
+                     <img src="LOGO.png" alt="Logo" class="h-24 w-auto object-contain">
+                     <div class="company-details text-right">
+                        <h1 class="font-bold text-gray-800 text-lg uppercase leading-tight mb-1">HOLIDAY TRAVELS</h1>
+                        <p class="text-xs text-gray-600">NEAR PAK MOSJID SALALAH</p>
+                        <p class="text-xs text-gray-600">Salalah, Sultanate of Oman</p>
+                        <p class="text-xs text-gray-600 mt-1"><strong>Phone:</strong> 78594007</p>
+                     </div>
+                </div>
+                <!-- END PRINT HEADER -->
+
                 <div class="p-6 bg-gray-50 border-b border-gray-200 flex flex-col gap-4 no-print">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="wallet" class="text-blue-600"></i> Due & Banking</h2>
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <i data-lucide="wallet" class="text-blue-600"></i> Due & Banking
+                        </h2>
                         <div class="flex gap-2">
                             <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
                             <button id="btn-undo-due" onclick="undoDeleteDue()" class="hidden bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Undo</button>
-                            <button onclick="addDueRow('customer')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-700">+ Customer Due</button>
-                            <button onclick="addDueRow('payable')" class="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-red-700">+ My Payable</button>
-                            <button onclick="addDueRow('bank')" class="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-green-700">+ Bank Deposit</button>
                         </div>
                     </div>
                     
@@ -387,7 +419,7 @@
                     </div>
                 </div>
 
-                <!-- Stats -->
+                <!-- Stats (Modified for Print to look like Summary Box) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 bg-white">
                     <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
                         <p class="text-xs font-bold text-blue-600 uppercase">Customer Due (Receivable)</p>
@@ -398,7 +430,7 @@
                         <p class="text-2xl font-black text-gray-800" id="due-total-pay">0.000</p>
                     </div>
                     <div class="bg-green-50 p-4 rounded-xl border border-green-100">
-                        <p class="text-xs font-bold text-green-600 uppercase">Total Bank Deposit</p>
+                        <p class="text-xs font-bold text-green-600 uppercase">Total Bank Balance</p>
                         <p class="text-2xl font-black text-gray-800" id="due-total-bank">0.000</p>
                     </div>
                     <div class="bg-purple-50 p-4 rounded-xl border border-purple-100">
@@ -425,6 +457,7 @@
                             </thead>
                             <tbody id="due-table-customer"></tbody>
                         </table>
+                        <button onclick="addDueRow('customer')" class="add-row-btn w-full mt-2 bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded hover:bg-blue-200 dashed-border border-blue-300 border-2 border-dashed">+ Add Customer Due</button>
                     </div>
                     <div>
                         <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="arrow-up-right" class="text-red-500 w-4 h-4"></i> My Payables (Pending)</h3>
@@ -432,6 +465,7 @@
                             <thead><tr><th style="width: 30%">Pay To (Name)</th><th style="width: 20%">Amount</th><th style="width: 20%">Pay Date</th><th style="width: 20%">Status</th><th style="width: 10%"></th></tr></thead>
                             <tbody id="due-table-payable"></tbody>
                         </table>
+                        <button onclick="addDueRow('payable')" class="add-row-btn w-full mt-2 bg-red-100 text-red-700 text-xs font-bold py-2 rounded hover:bg-red-200 dashed-border border-red-300 border-2 border-dashed">+ Add Payable</button>
                     </div>
                     <div>
                         <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="landmark" class="text-green-600 w-4 h-4"></i> Recent Bank Deposits</h3>
@@ -439,6 +473,7 @@
                             <thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Name / Details</th><th style="width: 30%">Amount</th><th style="width: 10%"></th></tr></thead>
                             <tbody id="due-table-bank"></tbody>
                         </table>
+                        <button onclick="addDueRow('bank')" class="add-row-btn w-full mt-2 bg-green-100 text-green-700 text-xs font-bold py-2 rounded hover:bg-green-200 dashed-border border-green-300 border-2 border-dashed">+ Add Bank Deposit</button>
                     </div>
                 </div>
 
@@ -709,16 +744,22 @@
             passInput.focus();
         }
 
+        // --- LOGO UPLOADER ---
+        // Removed click handler as per user request to remove upload feature
+        // Code below just checks if custom logo exists to display it if needed, but primary is LOGO.png
+        
         // --- TABS ---
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             const activeTab = document.getElementById(`tab-${tabName}`);
             if(activeTab) activeTab.classList.add('active');
             
+            // Reset buttons
             document.querySelectorAll('.tabs-nav button').forEach(btn => {
                 btn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50";
             });
             
+            // Activate current button
             const currentBtn = document.getElementById(`btn-tab-${tabName}`);
             if(currentBtn) {
                 currentBtn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md";
@@ -1164,7 +1205,7 @@
                 data = getHisabData();
                 filename = `HolidayTravels_Ledger_Full.csv`;
             } else {
-                data = getHisabData().filter(e => e.date && e.date.startsWith(selectedMonth));
+                data = getHisabData().filter(e => e.date.startsWith(selectedMonth));
                 filename = `Ledger_${selectedMonth}.csv`;
             }
             
@@ -1225,7 +1266,7 @@
             const selectedMonth = filterEl.value;
             
             const allData = getExpenseData();
-            const data = allData.filter(e => e.date && e.date.startsWith(selectedMonth));
+            const data = allData.filter(e => e.date.startsWith(selectedMonth));
             data.sort((a, b) => a.date.localeCompare(b.date));
 
             const tbody = document.getElementById('expense-table-body');
@@ -1556,6 +1597,76 @@
             renderProfitChart(labels, profitData);
             renderExpenseChart(); // New expense chart
             renderDueChart(); // New due chart
+            
+            // 6. CHECK-IN ALERTS
+            updateDashboardCheckins();
+        }
+
+        function updateDashboardCheckins() {
+            const reminders = getSalamReminders(); // Uses existing function from Notes logic
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            
+            const urgent = [];
+            
+            reminders.forEach(r => {
+                const flightDate = new Date(r.date);
+                flightDate.setHours(0,0,0,0);
+                
+                // Check if Today or Tomorrow
+                if (flightDate.getTime() === today.getTime() || flightDate.getTime() === tomorrow.getTime()) {
+                    urgent.push(r);
+                }
+            });
+            
+            const alertBox = document.getElementById('dashboard-alerts');
+            if (!alertBox) return;
+
+            if (urgent.length > 0) {
+                alertBox.classList.remove('hidden');
+                let html = `
+                <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r shadow-sm">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center">
+                            <i data-lucide="bell-ring" class="h-6 w-6 text-amber-600 mr-3 animate-pulse"></i>
+                            <div>
+                                <h3 class="text-lg font-bold text-amber-900">Urgent Check-ins Needed (${urgent.length})</h3>
+                                <p class="text-sm text-amber-700">Passengers flying within 48 hours.</p>
+                            </div>
+                        </div>
+                        <button onclick="switchTab('notes')" class="bg-amber-600 text-white text-xs px-4 py-1.5 rounded-lg font-bold hover:bg-amber-700 shadow-sm transition-colors">
+                            Go to Check-in
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">`;
+                    
+                urgent.forEach(r => {
+                     const fDate = new Date(r.date);
+                     fDate.setHours(0,0,0,0);
+                     const isToday = fDate.getTime() === today.getTime();
+                     const badge = isToday 
+                        ? `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-red-200">Flight Today</span>` 
+                        : `<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-blue-200">Tomorrow</span>`;
+                     
+                     html += `
+                      <div class="flex justify-between items-center bg-white p-2.5 rounded border border-amber-100 shadow-sm">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-gray-800 text-sm">${r.name}</span>
+                            <span class="font-mono text-xs text-gray-500">PNR: ${r.pnr}</span>
+                        </div>
+                        ${badge}
+                      </div>`;
+                });
+                
+                html += `</div></div>`;
+                alertBox.innerHTML = html;
+                lucide.createIcons();
+            } else {
+                alertBox.classList.add('hidden');
+                alertBox.innerHTML = '';
+            }
         }
 
         let salesChartInstance = null;
