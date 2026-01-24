@@ -12,7 +12,6 @@
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; transition: background-color 0.3s, color 0.3s; }
         .arabic-text { font-family: 'Cairo', sans-serif; direction: rtl; }
         
-        /* Dark Mode Styles */
         body.dark { background-color: #111827; color: #e5e7eb; }
         body.dark .bg-white { background-color: #1f2937; border-color: #374151; color: #e5e7eb; }
         body.dark .bg-gray-50 { background-color: #111827; border-color: #374151; }
@@ -22,26 +21,22 @@
         body.dark .excel-table th { background-color: #374151; color: #e5e7eb; border-color: #4b5563; }
         body.dark .excel-table td { border-color: #4b5563; }
 
-        /* Force Header to Stay White in Dark Mode */
         body.dark #global-header { background-color: white !important; border-color: #e5e7eb !important; }
         body.dark #global-header .text-gray-800 { color: #1f2937 !important; } 
 
-        /* Invoice Paper */
         .invoice-paper {
             max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 2rem;
             background-color: white; color: black; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
             display: flex; flex-direction: column; position: relative;
         }
         body.dark .invoice-paper { background-color: white; color: black; }
-        body.dark .invoice-paper .editable { color: black; }
         body.dark .invoice-paper div[contenteditable="true"] { outline: none; }
-        body.dark .invoice-paper div[contenteditable="true"]:focus { background-color: #f9fafb; border-radius: 4px; }
+        body.dark .invoice-paper div[contenteditable="true"]:focus { background-color: #f3f4f6; border-radius: 4px; }
 
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Excel-like Table Styles */
         .excel-table { border-collapse: collapse; width: 100%; font-size: 11px; } 
         .excel-table th, .excel-table td { border: 1px solid #d1d5db; padding: 6px 4px; }
         .excel-table th { background-color: #f3f4f6; font-weight: 700; text-align: center; white-space: nowrap; }
@@ -80,7 +75,7 @@
 </head>
 <body class="text-gray-800">
 
-    <!-- CLOUD SYNC INDICATOR -->
+    <!-- CLOUD STATUS INDICATOR -->
     <div id="cloud-sync-indicator" class="fixed bottom-4 right-4 z-[100] flex items-center gap-2 bg-gray-900 text-white px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg opacity-0 transition-opacity duration-500">
         <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
         <span>CLOUD SYNCED</span>
@@ -93,7 +88,7 @@
             <h2 class="text-2xl font-bold mb-2 text-gray-800">Login Required</h2>
             <p class="text-gray-500 mb-6 text-sm">Access the cloud management system.</p>
             <input type="password" id="password-input" placeholder="Passcode" class="w-full p-3 border border-gray-200 rounded-lg mb-4 text-center text-lg focus:ring-2 focus:ring-blue-500 outline-none">
-            <button onclick="attemptLogin()" class="w-full bg-gray-900 text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-lg">Login & Sync</button>
+            <button id="login-btn" onclick="attemptLogin()" class="w-full bg-gray-900 text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-lg">Login & Sync</button>
             <p id="login-error" class="text-red-500 text-sm mt-4 hidden font-medium">Incorrect Code</p>
         </div>
     </div>
@@ -107,7 +102,7 @@
                 <div class="h-8 w-px bg-gray-200 hidden md:block"></div>
                 <div>
                     <h1 class="text-sm font-bold uppercase tracking-tighter">Holiday Travels Cloud</h1>
-                    <p id="cloud-status" class="text-[10px] text-gray-400 font-bold uppercase">CONNECTING...</p>
+                    <p id="cloud-status" class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">CONNECTING...</p>
                 </div>
             </div>
             <div class="flex gap-2 items-center">
@@ -227,19 +222,19 @@
                 </div>
                 <div id="due-active-view" class="p-6 space-y-8">
                     <div>
-                        <h3 class="font-bold text-gray-700 mb-2 border-b flex items-center gap-2"><i data-lucide="arrow-down-left" class="text-blue-500 w-4 h-4"></i> Customer Dues (Receivables)</h3>
-                        <table class="excel-table w-full"><thead><tr><th style="width: 25%">Name</th><th style="width: 15%">Phone</th><th style="width: 20%">Amount</th><th style="width: 20%">Date</th><th style="width: 15%">Status</th><th class="no-print"></th></tr></thead><tbody id="due-table-customer"></tbody></table>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b flex items-center gap-2"><i data-lucide="arrow-down-left" class="text-blue-500 w-4 h-4"></i> Customer Dues</h3>
+                        <table class="excel-table w-full"><thead><tr><th>Name</th><th>Phone</th><th>Amount</th><th>Date</th><th>Status</th><th class="no-print"></th></tr></thead><tbody id="due-table-customer"></tbody></table>
                         <button onclick="addDueCloudRow('customer')" class="w-full mt-2 bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded-lg border-2 border-dashed border-blue-300 no-print">+ Add Customer Due</button>
                     </div>
                     <div>
-                        <h3 class="font-bold text-gray-700 mb-2 border-b flex items-center gap-2"><i data-lucide="arrow-up-right" class="text-red-500 w-4 h-4"></i> My Payables (Liabilities)</h3>
-                        <table class="excel-table w-full"><thead><tr><th style="width: 30%">Pay To</th><th style="width: 20%">Amount</th><th style="width: 20%">Pay Date</th><th style="width: 20%">Status</th><th class="no-print"></th></tr></thead><tbody id="due-table-payable"></tbody></table>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b flex items-center gap-2"><i data-lucide="arrow-up-right" class="text-red-500 w-4 h-4"></i> My Payables</h3>
+                        <table class="excel-table w-full"><thead><tr><th>Pay To</th><th>Amount</th><th>Pay Date</th><th>Status</th><th class="no-print"></th></tr></thead><tbody id="due-table-payable"></tbody></table>
                         <button onclick="addDueCloudRow('payable')" class="w-full mt-2 bg-red-100 text-red-700 text-xs font-bold py-2 rounded-lg border-2 border-dashed border-red-300 no-print">+ Add Payable</button>
                     </div>
                     <div>
                         <h3 class="font-bold text-gray-700 mb-2 border-b flex items-center gap-2"><i data-lucide="landmark" class="text-green-600 w-4 h-4"></i> Bank Deposits</h3>
-                        <table class="excel-table w-full"><thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Details</th><th style="width: 30%">Amount</th><th class="no-print"></th></tr></thead><tbody id="due-table-bank"></tbody></table>
-                        <button onclick="addDueCloudRow('bank')" class="w-full mt-2 bg-green-100 text-green-700 text-xs font-bold py-2 rounded-lg border-2 border-dashed border-green-300 no-print">+ Add Bank Deposit</button>
+                        <table class="excel-table w-full"><thead><tr><th>Date</th><th>Details</th><th>Amount</th><th class="no-print"></th></tr></thead><tbody id="due-table-bank"></tbody></table>
+                        <button onclick="addDueCloudRow('bank')" class="w-full mt-2 bg-green-100 text-green-700 text-xs font-bold py-2 rounded-lg border-2 border-dashed border-green-300 no-print">+ Add Deposit</button>
                     </div>
                 </div>
                 <div id="due-history-view" class="p-6 hidden">
@@ -355,40 +350,65 @@
 
     </div>
 
-    <!-- FIREBASE MODULE -->
+    <!-- FIREBASE & CORE ENGINE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
+        // FALLBACK CONFIG FOR VERCEL
+        const firebaseConfig = {
+            apiKey: "AIzaSyArysNQse_b9nJsq7FctkUOxjUCQX46bKo",
+            authDomain: "iday-travels.firebaseapp.com",
+            projectId: "iday-travels",
+            storageBucket: "iday-travels.firebasestorage.app",
+            messagingSenderId: "145637577276",
+            appId: "1:145637577276:web:5419bf357a2900a3d96939"
+        };
+        
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'holiday-travels-pro-cloud';
+        const appId = 'holiday-travels-online-v3'; // Unique App ID
 
         window.cloudState = { ledger: [], dues: [], tasks: [], salam: [], expenses: [], counter: 9876 };
         window.currentTab = 'dashboard';
         let dueViewMode = 'active';
 
-        // AUTH
+        // AUTHENTICATION
         const authenticate = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
+            try {
+                // Check if session token exists or standard anonymously
                 await signInAnonymously(auth);
+            } catch (err) {
+                console.error("Auth failed:", err);
             }
         };
 
         window.attemptLogin = async () => {
-            const pass = document.getElementById('password-input').value;
+            const input = document.getElementById('password-input');
+            const pass = input.value;
             if (pass === "96419161") {
                 document.getElementById('login-screen').style.display = 'none';
+                sessionStorage.setItem('holiday_authorized', 'true');
                 await authenticate();
             } else {
                 document.getElementById('login-error').classList.remove('hidden');
+                input.value = '';
+                input.focus();
             }
         };
+
+        // Keyboard Support for Login
+        document.getElementById('password-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') window.attemptLogin();
+        });
+
+        // Check Session on Load
+        if (sessionStorage.getItem('holiday_authorized') === 'true') {
+            document.getElementById('login-screen').style.display = 'none';
+            authenticate();
+        }
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -425,16 +445,18 @@
             });
         }
 
-        // CLOUD CRUD
+        // CLOUD OPERATIONS
         window.cloudSave = async (coll, data) => {
+            if (!auth.currentUser) return;
             const id = data.id || Date.now().toString();
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id), data);
         };
         window.cloudDelete = async (coll, id) => {
+            if (!auth.currentUser) return;
             if(confirm("Permanently delete from cloud?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id));
         };
 
-        // RENDERERS
+        // RENDER FUNCTIONS
         function renderHisab() {
             const tbody = document.getElementById('hisab-table-body');
             const month = document.getElementById('hisab-month-filter').value;
@@ -451,7 +473,7 @@
                     <td class="text-right text-blue-600 font-bold">${(i.sell - i.net).toFixed(3)}</td>
                     <td class="text-[10px] uppercase">${i.sector || '-'}</td>
                     <td class="text-right text-orange-600 font-black">${(i.due || 0).toFixed(3)}</td>
-                    <td class="no-print"><button onclick="event.stopPropagation(); cloudDelete('ledger', '${i.id}')" class="text-gray-300 hover:text-red-500">×</button></td>
+                    <td class="no-print"><button onclick="event.stopPropagation(); cloudDelete('ledger', '${i.id}')" class="text-red-300 hover:text-red-500">×</button></td>
                 </tr>
             `).join('');
 
@@ -482,7 +504,7 @@
 
             data.forEach(d => {
                 if(d.status === 'Paid' || d.status === 'Completed') {
-                    historyBody.innerHTML += `<tr><td class="text-[10px] font-black uppercase text-gray-400">${d.type}</td><td class="font-bold">${d.name}</td><td class="font-mono">${d.amount.toFixed(3)}</td><td>${d.date}</td><td class="no-print"><button onclick="cloudDelete('dues', '${d.id}')" class="text-red-300">×</button></td></tr>`;
+                    historyBody.innerHTML += `<tr><td class="text-[10px] font-black uppercase text-gray-400">${d.type}</td><td class="font-bold">${d.name}</td><td class="font-mono text-right">${d.amount.toFixed(3)}</td><td>${d.date}</td><td class="no-print"><button onclick="cloudDelete('dues', '${d.id}')" class="text-red-300">×</button></td></tr>`;
                 } else if(d.type === 'bank') {
                     activeBank.innerHTML += `<tr><td>${d.date}</td><td><input type="text" class="w-full bg-transparent border-none" value="${d.name}" onblur="cloudSave('dues', {...${JSON.stringify(d)}, name: this.value})"></td><td><input type="number" step="0.001" class="w-full bg-transparent border-none text-right font-black text-green-700" value="${d.amount}" onblur="cloudSave('dues', {...${JSON.stringify(d)}, amount: parseFloat(this.value)})"></td><td class="no-print"><button onclick="cloudDelete('dues', '${d.id}')" class="text-red-300">×</button></td></tr>`;
                 } else {
@@ -521,10 +543,10 @@
             activeList.innerHTML = data.filter(s => s.status !== 'Completed').map(s => `
                 <div class="p-3 rounded-xl border-l-4 ${s.date <= today ? 'bg-red-50 border-red-500' : 'bg-gray-50 border-green-500'} shadow-sm">
                     <div class="flex justify-between font-bold text-[10px]"><span>PNR: ${s.pnr}</span><span>FLIGHT: ${s.date}</span></div>
-                    <div class="text-sm font-bold">${s.name}</div>
+                    <div class="text-sm font-bold text-gray-700">${s.name}</div>
                     <div class="flex gap-2 mt-2">
-                        <button onclick="cloudSave('salam', {...${JSON.stringify(s)}, status: 'Completed'})" class="text-[8px] font-black text-green-600 border px-3 py-1 rounded uppercase">Done</button>
-                        <button onclick="cloudDelete('salam', '${s.id}')" class="text-[8px] font-black text-red-300 uppercase">Clear</button>
+                        <button onclick="cloudSave('salam', {...${JSON.stringify(s)}, status: 'Completed'})" class="text-[8px] font-black text-green-600 bg-white border border-green-200 px-3 py-1 rounded uppercase">Done</button>
+                        <button onclick="cloudDelete('salam', '${s.id}')" class="text-[8px] font-black text-red-300 uppercase px-3 py-1">Delete</button>
                     </div>
                 </div>
             `).join('');
@@ -601,7 +623,7 @@
             const urgent = window.cloudState.salam.filter(s => s.status !== 'Completed' && s.date <= today);
             if(urgent.length > 0) {
                 alertBox.classList.remove('hidden');
-                alertBox.innerHTML = `<div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl flex justify-between items-center shadow-sm"><div class="flex items-center gap-3"><i data-lucide="bell-ring" class="text-amber-600 animate-pulse"></i><div><p class="font-bold text-amber-900">${urgent.length} URGENT CHECK-INS</p><p class="text-[10px] text-amber-600 font-bold uppercase">Scheduled for today or past</p></div></div><button onclick="switchTab('notes')" class="bg-amber-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm">Go to Tracker</button></div>`;
+                alertBox.innerHTML = `<div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl flex justify-between items-center shadow-sm"><div class="flex items-center gap-3"><i data-lucide="bell-ring" class="text-amber-600 animate-pulse"></i><div><p class="font-bold text-amber-900">${urgent.length} URGENT CHECK-INS</p><p class="text-[10px] text-amber-600 font-bold uppercase">Flights scheduled for today or past</p></div></div><button onclick="switchTab('notes')" class="bg-amber-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm">Go to Tracker</button></div>`;
                 lucide.createIcons();
             } else { alertBox.classList.add('hidden'); }
 
@@ -724,7 +746,7 @@
             addInvRow();
         };
 
-        // NEW: AUTO CLEAR LOGIC
+        // AUTO-CLEAR FEATURE
         function setupAutoClear(id, defaultText) {
             const el = document.getElementById(id);
             if(!el) return;
@@ -738,8 +760,6 @@
         document.getElementById('inv-date').textContent = new Date().toLocaleDateString('en-GB');
         addInvRow();
         lucide.createIcons();
-        
-        // Setup the specific behaviors for invoice
         setupAutoClear('inv-client', 'Customer Name');
         setupAutoClear('inv-phone', '968...');
     </script>
