@@ -26,7 +26,7 @@
         body.dark .hover\:bg-gray-50:hover { background-color: #374151; }
         body.dark .excel-table th { background-color: #374151; color: #e5e7eb; border-color: #4b5563; }
         body.dark .excel-table td { border-color: #4b5563; }
-        body.dark .excel-table tr:nth-child(even) { background-color: #1f2937; } /* Darker alt row */
+        body.dark .excel-table tr:nth-child(even) { background-color: #1f2937; } 
         body.dark .excel-table tr:hover { background-color: #374151; }
         
         /* Specific Dark Mode Overrides */
@@ -37,10 +37,20 @@
         body.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.1); border-color: rgba(249, 115, 22, 0.2); }
         body.dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.1); border-color: rgba(234, 179, 8, 0.2); }
 
-        /* Invoice Paper (Always White for Print/View) */
+        /* Force Header to Stay White in Dark Mode */
+        body.dark #global-header {
+            background-color: white !important;
+            border-color: #e5e7eb !important;
+        }
+        /* Restore Dark Text for Header in Dark Mode */
+        body.dark #global-header .text-gray-800 { color: #1f2937 !important; } 
+        body.dark #global-header .text-gray-600 { color: #4b5563 !important; }
+        body.dark #global-header .text-gray-500 { color: #6b7280 !important; }
+
+        /* Invoice Paper (Always White) */
         .invoice-paper {
             max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 2rem;
-            background-color: white; /* Keep white for paper simulation */
+            background-color: white; 
             color: black;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
             display: flex; flex-direction: column; position: relative;
@@ -49,7 +59,6 @@
             background-color: white; 
             color: black;
         }
-        /* Fix editable fields in invoice paper during dark mode */
         body.dark .invoice-paper .editable { color: black; }
         body.dark .invoice-paper input { background-color: transparent; color: black; border-color: #ddd; }
 
@@ -93,7 +102,8 @@
             #tab-invoice.active .grid { display: grid !important; grid-template-columns: 1fr 1fr !important; }
             
             #tab-hisab.active { width: 100%; }
-            /* Force table styles for print */
+            #tab-expense.active { width: 100%; }
+            
             .excel-table th, .excel-table td { border: 1px solid #000 !important; font-size: 10px; color: black !important; background: white !important; } 
             
             #tab-dashboard.active .chart-container { page-break-inside: avoid; }
@@ -108,7 +118,6 @@
     <div id="login-screen" class="fixed inset-0 bg-gray-100 z-[9999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center border border-gray-200">
             <div class="mb-6 flex justify-center">
-                <!-- Login Logo -->
                 <img id="login-logo-img" src="LOGO.png" alt="Holiday Travels" class="h-24 w-auto object-contain">
             </div>
             <h2 class="text-2xl font-bold mb-2 text-gray-800">Login Required</h2>
@@ -125,17 +134,13 @@
         <!-- GLOBAL HEADER & BACKUP CONTROLS -->
         <div id="global-header" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
-                <!-- Header Logo with Click-to-Upload (No Icon Fallback) -->
-                <label class="cursor-pointer group relative">
-                    <img id="header-logo-img" src="LOGO.png" alt="Holiday Travels" class="h-12 w-auto object-contain group-hover:opacity-80 transition-opacity">
-                    <input type="file" class="hidden" accept="image/*" onchange="updateAllLogos(this)">
-                    <span class="absolute -bottom-8 left-0 w-max bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Click to Change Logo</span>
-                </label>
+                <!-- Static Header Logo (No Upload) -->
+                <img id="header-logo-img" src="LOGO.png" alt="Holiday Travels" class="h-12 w-auto object-contain">
             </div>
             <div class="flex gap-2 w-full md:w-auto items-center">
                 <!-- Dark Mode Toggle -->
-                <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mr-2" title="Toggle Dark Mode">
-                    <i data-lucide="moon" class="w-5 h-5 text-gray-600 dark:text-gray-300 dark:hidden"></i>
+                <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 transition-colors mr-2" title="Toggle Dark Mode">
+                    <i data-lucide="moon" class="w-5 h-5 text-gray-600 dark:hidden"></i>
                     <i data-lucide="sun" class="w-5 h-5 text-yellow-400 hidden dark:block"></i>
                 </button>
 
@@ -160,12 +165,15 @@
             <button onclick="switchTab('due')" id="btn-tab-due" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
                 <i data-lucide="wallet" class="w-4 h-4"></i> Due & Bank
             </button>
+            <button onclick="switchTab('expense')" id="btn-tab-expense" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
+                <i data-lucide="calculator" class="w-4 h-4"></i> Expenses
+            </button>
             <button onclick="switchTab('invoice')" id="btn-tab-invoice" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
                 <i data-lucide="file-text" class="w-4 h-4"></i> Invoice
             </button>
         </div>
 
-        <!-- TAB 1: DASHBOARD (Now First) -->
+        <!-- TAB 1: DASHBOARD -->
         <div id="tab-dashboard" class="tab-content active">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
                 <div class="p-6 bg-gray-50 border-b border-gray-200">
@@ -209,8 +217,6 @@
         <!-- TAB 2: TRAVEL LEDGER (HISAB) -->
         <div id="tab-hisab" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                
-                <!-- Hisab Controls -->
                 <div class="p-4 border-b border-gray-100 bg-gray-50 no-print">
                     <div class="flex flex-wrap justify-between items-center gap-4">
                         <div class="flex items-center gap-2">
@@ -230,86 +236,41 @@
                     </div>
                 </div>
 
-                <!-- Add/Update Entry Form -->
                 <div class="px-6 py-4 bg-white border-b border-gray-200 no-print">
                     <form onsubmit="event.preventDefault(); addHisabEntry();" class="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-2 items-end">
                         <input type="hidden" id="h-edit-id"> 
-                        
-                        <div class="col-span-1">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1">DATE</label>
-                            <input type="date" id="h-date" class="w-full p-1.5 border border-gray-300 rounded text-xs bg-yellow-50" title="Leave empty for Today's Date">
-                        </div>
-                        <div class="col-span-1 md:col-span-2">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1">NAME</label>
-                            <input type="text" id="h-name" placeholder="Passenger Name" class="w-full p-1.5 border border-gray-300 rounded text-xs" required>
-                        </div>
-                        <div class="col-span-1">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1">PNR</label>
-                            <input type="text" id="h-pnr" placeholder="PNR" class="w-full p-1.5 border border-gray-300 rounded text-xs">
-                        </div>
-                        <div class="col-span-1">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1">FLIGHT DATE</label>
-                            <input type="date" id="h-fdate" class="w-full p-1.5 border border-gray-300 rounded text-xs" title="Leave empty to use Entry Date">
-                        </div>
-                        <div class="col-span-1">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1">SECTOR</label>
-                            <input type="text" id="h-sector" placeholder="DXB-MCT" class="w-full p-1.5 border border-gray-300 rounded text-xs">
-                        </div>
-                        <div class="col-span-1">
-                            <label class="block text-[10px] font-bold text-gray-500 mb-1">PHONE</label>
-                            <input type="text" id="h-phone" placeholder="968..." class="w-full p-1.5 border border-gray-300 rounded text-xs">
-                        </div>
-                        <!-- Financials -->
-                        <div class="col-span-1">
-                            <label class="block text-[10px] font-bold text-red-600 mb-1">NET (COST)</label>
-                            <input type="number" step="0.001" id="h-net" placeholder="0.000" class="w-full p-1.5 border border-red-200 rounded text-xs focus:border-red-500" required>
-                        </div>
-                        <div class="col-span-1">
-                            <label class="block text-[10px] font-bold text-green-600 mb-1">SELL (SALE)</label>
-                            <input type="number" step="0.001" id="h-sell" placeholder="0.000" class="w-full p-1.5 border border-green-200 rounded text-xs focus:border-green-500" required>
-                        </div>
-                        <div class="col-span-1">
-                            <label class="block text-[10px] font-bold text-orange-500 mb-1">DUE</label>
-                            <input type="number" step="0.001" id="h-due" placeholder="0.000" class="w-full p-1.5 border border-orange-200 rounded text-xs">
-                        </div>
+                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">DATE</label><input type="date" id="h-date" class="w-full p-1.5 border border-gray-300 rounded text-xs bg-yellow-50" title="Leave empty for Today's Date"></div>
+                        <div class="col-span-1 md:col-span-2"><label class="block text-[10px] font-bold text-gray-500 mb-1">NAME</label><input type="text" id="h-name" placeholder="Passenger Name" class="w-full p-1.5 border border-gray-300 rounded text-xs" required></div>
+                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">PNR</label><input type="text" id="h-pnr" placeholder="PNR" class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
+                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">FLIGHT DATE</label><input type="date" id="h-fdate" class="w-full p-1.5 border border-gray-300 rounded text-xs" title="Leave empty to use Entry Date"></div>
+                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">SECTOR</label><input type="text" id="h-sector" placeholder="DXB-MCT" class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
+                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">PHONE</label><input type="text" id="h-phone" placeholder="968..." class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
+                        <div class="col-span-1"><label class="block text-[10px] font-bold text-red-600 mb-1">NET (COST)</label><input type="number" step="0.001" id="h-net" placeholder="0.000" class="w-full p-1.5 border border-red-200 rounded text-xs focus:border-red-500" required></div>
+                        <div class="col-span-1"><label class="block text-[10px] font-bold text-green-600 mb-1">SELL (SALE)</label><input type="number" step="0.001" id="h-sell" placeholder="0.000" class="w-full p-1.5 border border-green-200 rounded text-xs focus:border-green-500" required></div>
+                        <div class="col-span-1"><label class="block text-[10px] font-bold text-orange-500 mb-1">DUE</label><input type="number" step="0.001" id="h-due" placeholder="0.000" class="w-full p-1.5 border border-orange-200 rounded text-xs"></div>
                         <div class="col-span-1 md:col-span-1 flex gap-1">
                             <button type="submit" id="btn-add-update" class="flex-grow bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700 text-xs h-[30px] mt-4 shadow-sm transition-colors">ADD</button>
-                            <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="hidden bg-gray-200 text-gray-600 p-1.5 rounded font-bold hover:bg-gray-300 text-xs h-[30px] mt-4 w-8 flex items-center justify-center">
-                                <i data-lucide="x" class="w-3 h-3"></i>
-                            </button>
+                            <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="hidden bg-gray-200 text-gray-600 p-1.5 rounded font-bold hover:bg-gray-300 text-xs h-[30px] mt-4 w-8 flex items-center justify-center"><i data-lucide="x" class="w-3 h-3"></i></button>
                         </div>
                     </form>
                 </div>
 
-                <!-- Spreadsheet Table -->
                 <div class="p-6 bg-white min-h-[500px]">
                     <div class="text-center mb-4">
                         <h1 class="text-xl font-bold text-gray-800 uppercase tracking-widest">Travel Agency Ledger</h1>
                         <p class="text-sm text-gray-500" id="sheet-header-date">January 2026</p>
                     </div>
-
                     <div class="grid grid-cols-4 gap-0 mb-4 border border-gray-300 text-center text-xs font-bold bg-gray-50">
                         <div class="p-2 border-r border-gray-300 text-red-700">Total Net (Cost): <span id="tot-net">0.000</span></div>
                         <div class="p-2 border-r border-gray-300 text-green-700">Total Sell: <span id="tot-sell">0.000</span></div>
                         <div class="p-2 border-r border-gray-300 text-blue-800">Total Profit: <span id="tot-profit">0.000</span></div>
                         <div class="p-2 text-orange-600">Total Due: <span id="tot-due">0.000</span></div>
                     </div>
-
                     <div class="overflow-x-auto">
                         <table class="excel-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 8%">DATE</th>
-                                    <th style="width: 15%">NAME</th>
-                                    <th style="width: 8%">PNR</th>
-                                    <th style="width: 8%">FLIGHT DATE</th>
-                                    <th style="width: 8%">NET</th>
-                                    <th style="width: 8%">SELL</th>
-                                    <th style="width: 8%; background-color: #e0f2fe;">PROFIT</th>
-                                    <th style="width: 10%">SECTOR</th>
-                                    <th style="width: 10%">PHONE</th>
-                                    <th style="width: 8%; background-color: #fff7ed;">DUE</th>
-                                    <th class="no-print" style="width: 4%"></th>
+                                    <th style="width: 8%">DATE</th><th style="width: 15%">NAME</th><th style="width: 8%">PNR</th><th style="width: 8%">FLIGHT DATE</th><th style="width: 8%">NET</th><th style="width: 8%">SELL</th><th style="width: 8%; background-color: #e0f2fe;">PROFIT</th><th style="width: 10%">SECTOR</th><th style="width: 10%">PHONE</th><th style="width: 8%; background-color: #fff7ed;">DUE</th><th class="no-print" style="width: 4%"></th>
                                 </tr>
                             </thead>
                             <tbody id="hisab-table-body" class="text-gray-700 font-mono"></tbody>
@@ -322,53 +283,52 @@
         <!-- TAB 3: DUE & BANKING TRACKER -->
         <div id="tab-due" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
-                <div class="p-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center no-print">
-                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                        <i data-lucide="wallet" class="text-blue-600"></i> Due & Banking
-                    </h2>
-                    <div class="flex gap-2">
-                        <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
-                        <button id="btn-undo-due" onclick="undoDeleteDue()" class="hidden bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Undo</button>
-                        <button onclick="addDueRow('customer')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-700">+ Customer Due</button>
-                        <button onclick="addDueRow('payable')" class="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-red-700">+ My Payable</button>
-                        <button onclick="addDueRow('bank')" class="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-green-700">+ Bank Deposit</button>
+                <div class="p-6 bg-gray-50 border-b border-gray-200 flex flex-col gap-4 no-print">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <i data-lucide="wallet" class="text-blue-600"></i> Due & Banking
+                        </h2>
+                        <div class="flex gap-2">
+                            <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
+                            <button id="btn-undo-due" onclick="undoDeleteDue()" class="hidden bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Undo</button>
+                            <button onclick="addDueRow('customer')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-700">+ Customer Due</button>
+                            <button onclick="addDueRow('payable')" class="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-red-700">+ My Payable</button>
+                            <button onclick="addDueRow('bank')" class="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-green-700">+ Bank Deposit</button>
+                        </div>
+                    </div>
+                    
+                    <!-- View Toggle -->
+                    <div class="flex justify-center">
+                        <div class="bg-gray-200 p-1 rounded-lg flex gap-1">
+                            <button onclick="setDueView('active')" id="btn-due-active" class="px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all">Active / Pending</button>
+                            <button onclick="setDueView('history')" id="btn-due-history" class="px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all">History / Paid</button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 bg-white">
                     <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                        <p class="text-xs font-bold text-blue-600 uppercase">Customer Due (Receivable)</p>
+                        <p class="text-xs font-bold text-blue-600 uppercase">Customer Due (Pending)</p>
                         <p class="text-2xl font-black text-gray-800" id="due-total-receive">0.000</p>
                     </div>
                     <div class="bg-red-50 p-4 rounded-xl border border-red-100">
-                        <p class="text-xs font-bold text-red-600 uppercase">My Payables (Liability)</p>
+                        <p class="text-xs font-bold text-red-600 uppercase">My Payables (Pending)</p>
                         <p class="text-2xl font-black text-gray-800" id="due-total-pay">0.000</p>
                     </div>
-                    <div class="bg-green-50 p-4 rounded-xl border border-green-100">
-                        <p class="text-xs font-bold text-green-600 uppercase">Total Bank Deposit</p>
-                        <p class="text-2xl font-black text-gray-800" id="due-total-bank">0.000</p>
-                    </div>
-                    <!-- New Net Balance Card -->
-                    <div class="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                        <p class="text-xs font-bold text-purple-600 uppercase">Projected Net Balance</p>
-                        <p class="text-2xl font-black text-gray-800" id="due-total-balance">0.000</p>
-                        <p class="text-[9px] text-purple-400 mt-1 uppercase tracking-wide">Due + Bank - Payables</p>
-                    </div>
-                </div>
-
                 <div class="grid grid-cols-1 gap-6 p-6">
                     <!-- SECTION 1: CUSTOMERS DUE TO ME -->
                     <div>
-                        <h3 class="font-bold text-gray-700 mb-2 border-b pb-1">Customer Dues (Receivables)</h3>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="arrow-down-left" class="text-blue-500 w-4 h-4"></i> Customer Dues (Receivables)</h3>
                         <table class="excel-table w-full">
                             <thead>
                                 <tr>
-                                    <th style="width: 30%">Customer Name</th>
+                                    <th style="width: 25%">Customer Name</th>
+                                    <th style="width: 15%">Phone (Opt)</th>
                                     <th style="width: 20%">Amount</th>
                                     <th style="width: 20%">Due Date</th>
-                                    <th style="width: 20%">Status</th>
-                                    <th style="width: 10%"></th>
+                                    <th style="width: 15%">Status</th>
+                                    <th style="width: 5%"></th>
                                 </tr>
                             </thead>
                             <tbody id="due-table-customer"></tbody>
@@ -377,41 +337,131 @@
 
                     <!-- SECTION 2: MY PAYABLES -->
                     <div>
-                        <h3 class="font-bold text-gray-700 mb-2 border-b pb-1">My Payables (To Others)</h3>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="arrow-up-right" class="text-red-500 w-4 h-4"></i> My Payables (Pending)</h3>
                         <table class="excel-table w-full">
-                            <thead>
-                                <tr>
-                                    <th style="width: 30%">Pay To (Name)</th>
-                                    <th style="width: 20%">Amount</th>
-                                    <th style="width: 20%">Pay Date</th>
-                                    <th style="width: 20%">Status</th>
-                                    <th style="width: 10%"></th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th style="width: 30%">Pay To (Name)</th><th style="width: 20%">Amount</th><th style="width: 20%">Pay Date</th><th style="width: 20%">Status</th><th style="width: 10%"></th></tr></thead>
                             <tbody id="due-table-payable"></tbody>
                         </table>
                     </div>
-
-                    <!-- SECTION 3: BANK DEPOSITS -->
                     <div>
-                        <h3 class="font-bold text-gray-700 mb-2 border-b pb-1">Bank Deposits</h3>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="landmark" class="text-green-600 w-4 h-4"></i> Recent Bank Deposits</h3>
                         <table class="excel-table w-full">
-                            <thead>
-                                <tr>
-                                    <th style="width: 20%">Date</th>
-                                    <th style="width: 40%">Bank Name / Details</th>
-                                    <th style="width: 30%">Amount</th>
-                                    <th style="width: 10%"></th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Name / Details</th><th style="width: 30%">Amount</th><th style="width: 10%"></th></tr></thead>
                             <tbody id="due-table-bank"></tbody>
                         </table>
                     </div>
                 </div>
+
+                <!-- HISTORY VIEW (Hidden by default) -->
+                <div id="due-history-view" class="hidden p-6">
+                    <div class="mb-8">
+                        <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="history" class="text-gray-500 w-4 h-4"></i> Completed / Paid Dues History</h3>
+                        <table class="excel-table w-full">
+                            <thead>
+                                <tr>
+                                    <th style="width: 10%">Type</th>
+                                    <th style="width: 25%">Name / Details</th>
+                                    <th style="width: 15%">Amount</th>
+                                    <th style="width: 15%">Due Date</th>
+                                    <th style="width: 15%">Paid Date</th>
+                                    <th style="width: 10%">Status</th>
+                                    <th style="width: 10%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="due-table-history"></tbody>
+                        </table>
+                        <p class="text-xs text-gray-400 mt-2 text-center">Showing Paid Dues & Payables</p>
+                    </div>
+
+                    <div>
+                         <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="landmark" class="text-green-600 w-4 h-4"></i> All Bank Deposits History</h3>
+                         <table class="excel-table w-full">
+                            <thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Name / Details</th><th style="width: 30%">Amount</th><th style="width: 10%"></th></tr></thead>
+                            <tbody id="due-table-bank-history"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <!-- TAB 5: EXPENSE CALCULATOR (NEW) -->
+        <div id="tab-expense" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
+                <!-- Expense Header -->
+                <div class="p-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center no-print">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="calculator" class="text-purple-600"></i> Expense Calculator</h2>
+                        <div class="h-6 w-px bg-gray-300 mx-2"></div>
+                        <input type="month" id="expense-month-filter" class="p-1 border border-gray-300 rounded text-sm font-bold text-gray-800" onchange="loadExpense()">
+                    </div>
+                    <div class="flex gap-2">
+                         <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
+                         <button onclick="exportExpense()" class="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-1"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Export</button>
+                    </div>
+                </div>
+
+                <!-- Expense Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <p class="text-xs font-bold text-blue-600 uppercase">Office Expenses</p>
+                        <p class="text-2xl font-black text-gray-800" id="exp-total-office">0.000</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                        <p class="text-xs font-bold text-purple-600 uppercase">Personal Expenses</p>
+                        <p class="text-2xl font-black text-gray-800" id="exp-total-personal">0.000</p>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100">
+                        <p class="text-xs font-bold text-red-600 uppercase">Total Expenses</p>
+                        <p class="text-2xl font-black text-gray-800" id="exp-total-grand">0.000</p>
+                    </div>
+                </div>
+
+                <!-- Add Expense Form -->
+                <div class="px-6 py-4 bg-white border-b border-gray-200 no-print">
+                    <form onsubmit="event.preventDefault(); addExpenseEntry();" class="flex flex-wrap gap-2 items-end">
+                         <div class="w-36">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Date</label>
+                            <input type="date" id="exp-date" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required>
+                        </div>
+                        <div class="flex-grow min-w-[200px]">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Description</label>
+                            <input type="text" id="exp-desc" placeholder="Expense Details..." class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required>
+                        </div>
+                        <div class="w-32">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Type</label>
+                            <select id="exp-type" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50">
+                                <option value="Office">Office</option>
+                                <option value="Personal">Personal</option>
+                            </select>
+                        </div>
+                        <div class="w-28">
+                            <label class="block text-xs font-bold text-gray-500 mb-1">Amount</label>
+                            <input type="number" step="0.001" id="exp-amount" placeholder="0.000" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required>
+                        </div>
+                        <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded font-bold hover:bg-red-700 h-[38px] text-sm shadow-sm">Add</button>
+                    </form>
+                </div>
+
+                <!-- Expense Table -->
+                <div class="p-6 bg-white min-h-[300px]">
+                    <table class="excel-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%">Date</th>
+                                <th style="width: 45%">Description</th>
+                                <th style="width: 15%">Type</th>
+                                <th style="width: 15%">Amount</th>
+                                <th class="no-print" style="width: 10%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="expense-table-body" class="text-gray-700 font-mono"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- TAB 4: INVOICE GENERATOR -->
+        <!-- TAB 5: INVOICE GENERATOR -->
         <div id="tab-invoice" class="tab-content">
             <!-- Controls -->
             <div class="controls bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 justify-between items-center mb-6 max-w-[210mm] mx-auto">
@@ -516,6 +566,7 @@
         const STORAGE_KEY_COUNTER = 'holidayTravelsInvoiceNum';
         const STORAGE_HISAB = 'holiday_ledger_data';
         const STORAGE_DUE = 'holiday_due_data';
+        const STORAGE_EXPENSE = 'holiday_expense_data';
         
         lucide.createIcons();
 
@@ -561,51 +612,9 @@
         }
 
         // --- LOGO UPLOADER ---
-        function updateAllLogos(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const dataUrl = e.target.result;
-                    const logoIds = ['login-logo-img', 'header-logo-img', 'invoice-logo-img'];
-                    
-                    logoIds.forEach(id => {
-                        const img = document.getElementById(id);
-                        if(img) {
-                            img.src = dataUrl;
-                            img.style.display = 'block';
-                            // Hide any fallbacks next to it (like placeholders)
-                            if(img.nextElementSibling && img.nextElementSibling.classList.contains('logo-placeholder')) {
-                                img.nextElementSibling.style.display = 'none';
-                            }
-                        }
-                    });
-                    
-                    // Save to local storage
-                    try {
-                        localStorage.setItem('holiday_custom_logo', dataUrl);
-                    } catch(err) {
-                        console.log('Logo too big for storage');
-                    }
-                }
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        // Load saved logo
-        const savedLogo = localStorage.getItem('holiday_custom_logo');
-        if(savedLogo) {
-            ['login-logo-img', 'header-logo-img', 'invoice-logo-img'].forEach(id => {
-                const img = document.getElementById(id);
-                if(img) {
-                    img.src = savedLogo;
-                    img.style.display = 'block';
-                    if(img.nextElementSibling && img.nextElementSibling.classList.contains('logo-placeholder')) {
-                        img.nextElementSibling.style.display = 'none';
-                    }
-                }
-            });
-        }
-
+        // Removed click handler as per user request to remove upload feature
+        // Code below just checks if custom logo exists to display it if needed, but primary is LOGO.png
+        
         // --- TABS ---
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -626,6 +635,7 @@
             if(tabName === 'hisab') loadHisab();
             if(tabName === 'dashboard') updateDashboard();
             if(tabName === 'due') loadDueData();
+            if(tabName === 'expense') loadExpense();
             if(tabName === 'invoice') {
                 if(itemsTableBody && itemsTableBody.children.length === 0) addRow();
             }
@@ -653,7 +663,6 @@
             setInvoiceNumberDisplay(parseInt(lastNum, 10) + 1);
         }
 
-        // Initializes dates. Sets Invoice to Today. Sets Ledger to today/sticky.
         function setTodayDate() {
             const today = new Date();
             const d = String(today.getDate()).padStart(2, '0');
@@ -666,13 +675,15 @@
             const monthStr = `${y}-${m}`;
             const monthFilter = document.getElementById('hisab-month-filter');
             if(monthFilter) monthFilter.value = monthStr;
-            
-            // Ledger Date defaults to today initially
+            const expMonthFilter = document.getElementById('expense-month-filter');
+            if(expMonthFilter) expMonthFilter.value = monthStr;
+
             const hDate = document.getElementById('h-date');
             if(hDate) hDate.valueAsDate = today;
+            const expDate = document.getElementById('exp-date');
+            if(expDate) expDate.valueAsDate = today;
         }
 
-        // Specific function to reset ONLY the Invoice Date
         function resetInvoiceDate() {
             const today = new Date();
             const d = String(today.getDate()).padStart(2, '0');
@@ -751,7 +762,7 @@
             let currentHigh = parseInt(localStorage.getItem(STORAGE_KEY_COUNTER) || 0, 10);
             if (id > currentHigh) localStorage.setItem(STORAGE_KEY_COUNTER, id);
 
-            // Auto-Add Invoice to Ledger (Uses Invoice Date)
+            // Auto-Add Invoice to Ledger
             const totEl = document.getElementById('total');
             const totalAmount = totEl ? parseFloat(totEl.textContent) : 0;
             if (totalAmount > 0) {
@@ -794,7 +805,7 @@
         function generateNewInvoice() {
             let lastNum = localStorage.getItem(STORAGE_KEY_COUNTER) || 9876;
             setInvoiceNumberDisplay(parseInt(lastNum, 10) + 1);
-            resetInvoiceDate(); // Reset Date to Today for new invoices (OLD BEHAVIOR KEPT)
+            resetInvoiceDate(); 
             document.getElementById('customer-name').innerText = "Customer Name";
             document.getElementById('customer-phone').innerText = "Phone Number";
             const paidEl = document.getElementById('paid-toggle');
@@ -859,7 +870,6 @@
             let dateEl = document.getElementById('h-date');
             let date = dateEl.value;
 
-            // IF DATE IS EMPTY -> USE TODAY
             if (!date) {
                 const today = new Date();
                 const d = String(today.getDate()).padStart(2, '0');
@@ -871,7 +881,6 @@
 
             const name = document.getElementById('h-name').value;
             const pnr = document.getElementById('h-pnr').value;
-            // AUTO FILL FLIGHT DATE WITH ENTRY DATE IF EMPTY
             const fdate = document.getElementById('h-fdate').value || date;
             const sector = document.getElementById('h-sector').value;
             const phone = document.getElementById('h-phone').value;
@@ -892,7 +901,6 @@
                 updateHisabTransaction(editId, entryData);
             } else {
                 addHisabTransaction({ ...entryData, invoiceId: null });
-                // Reset fields EXCEPT Date (Sticky Date)
                 ['h-name','h-pnr','h-fdate','h-sector','h-phone','h-net','h-sell','h-due'].forEach(id => document.getElementById(id).value = '');
                 document.getElementById('h-name').focus();
             }
@@ -1085,6 +1093,97 @@
             link.click();
         }
 
+        // --- EXPENSE LOGIC ---
+        function getExpenseData() {
+            const raw = localStorage.getItem(STORAGE_EXPENSE);
+            return raw ? JSON.parse(raw) : [];
+        }
+
+        function addExpenseEntry() {
+            const date = document.getElementById('exp-date').value;
+            const desc = document.getElementById('exp-desc').value;
+            const type = document.getElementById('exp-type').value;
+            const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
+
+            if(!date || !desc || amount === 0) return alert('Please fill all fields');
+
+            const data = getExpenseData();
+            data.push({ id: Date.now(), date, desc, type, amount });
+            localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(data));
+            
+            // Reset
+            document.getElementById('exp-desc').value = '';
+            document.getElementById('exp-amount').value = '';
+            loadExpense();
+        }
+
+        function deleteExpenseEntry(id) {
+            if(!confirm('Delete this expense?')) return;
+            const data = getExpenseData().filter(e => e.id !== id);
+            localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(data));
+            loadExpense();
+        }
+
+        function loadExpense() {
+            const filterEl = document.getElementById('expense-month-filter');
+            if(!filterEl) return;
+            const selectedMonth = filterEl.value;
+            
+            const allData = getExpenseData();
+            const data = allData.filter(e => e.date.startsWith(selectedMonth));
+            data.sort((a, b) => a.date.localeCompare(b.date));
+
+            const tbody = document.getElementById('expense-table-body');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            let officeTotal = 0, personalTotal = 0;
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-400 italic">No expenses found for this month.</td></tr>';
+            } else {
+                data.forEach(item => {
+                    if (item.type === 'Office') officeTotal += item.amount;
+                    else personalTotal += item.amount;
+
+                    const row = document.createElement('tr');
+                    const displayDate = new Date(item.date).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'});
+                    const badgeClass = item.type === 'Office' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
+
+                    row.innerHTML = `
+                        <td class="text-center">${displayDate}</td>
+                        <td>${item.desc}</td>
+                        <td class="text-center"><span class="px-2 py-1 rounded text-xs font-bold ${badgeClass}">${item.type}</span></td>
+                        <td class="text-right font-mono">${item.amount.toFixed(3)}</td>
+                        <td class="text-center no-print"><button onclick="deleteExpenseEntry(${item.id})" class="text-gray-400 hover:text-red-500"><i data-lucide="x" class="w-3 h-3"></i></button></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            document.getElementById('exp-total-office').textContent = officeTotal.toFixed(3);
+            document.getElementById('exp-total-personal').textContent = personalTotal.toFixed(3);
+            document.getElementById('exp-total-grand').textContent = (officeTotal + personalTotal).toFixed(3);
+            lucide.createIcons();
+        }
+
+        function exportExpense() {
+            const selectedMonth = document.getElementById('expense-month-filter').value;
+            const data = getExpenseData().filter(e => e.date.startsWith(selectedMonth));
+            let csvContent = "data:text/csv;charset=utf-8,Date,Description,Type,Amount\n";
+            
+            data.forEach(e => {
+                csvContent += `${e.date},"${e.desc}",${e.type},${e.amount}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Expenses_${selectedMonth}.csv`);
+            document.body.appendChild(link);
+            link.click();
+        }
+
         // --- DUE & BANKING LOGIC ---
         function getDueData() {
             const raw = localStorage.getItem(STORAGE_DUE);
@@ -1097,10 +1196,12 @@
                 id: Date.now(),
                 type: type, // 'customer', 'payable', 'bank'
                 name: type === 'bank' ? '' : 'Name',
+                phone: '', // Added Phone field
                 bankName: type === 'bank' ? 'Bank Name' : '',
                 amount: 0,
                 date: new Date().toISOString().split('T')[0],
-                status: 'Pending'
+                status: 'Pending',
+                paymentDate: '' // New field for history
             };
             data.push(newItem);
             localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
@@ -1112,8 +1213,18 @@
             const index = data.findIndex(e => e.id === id);
             if(index !== -1) {
                 data[index][field] = value;
+                
+                // Auto-set Payment Date when marked Paid
+                if(field === 'status' && value === 'Paid' && !data[index].paymentDate) {
+                    data[index].paymentDate = new Date().toISOString().split('T')[0];
+                }
+                // Clear Payment Date if marked Pending
+                if(field === 'status' && value === 'Pending') {
+                    data[index].paymentDate = '';
+                }
+
                 localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
-                loadDueData(); // Refresh totals
+                loadDueData();
             }
         }
 
@@ -1124,21 +1235,15 @@
             const data = getDueData();
             const itemIndex = data.findIndex(e => e.id === id);
             if (itemIndex > -1) {
-                lastDeletedDue = data[itemIndex]; // Save for Undo
+                lastDeletedDue = data[itemIndex]; 
                 data.splice(itemIndex, 1);
                 localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
                 loadDueData();
                 
-                // Show Undo Button logic
                 const btn = document.getElementById('btn-undo-due');
                 if(btn) {
                     btn.classList.remove('hidden');
-                    btn.innerHTML = `<i data-lucide="rotate-ccw" class="w-3 h-3"></i> Undo Delete`;
-                    // Auto hide after 8 seconds
-                    setTimeout(() => { 
-                        btn.classList.add('hidden'); 
-                        lastDeletedDue = null; 
-                    }, 8000);
+                    setTimeout(() => { btn.classList.add('hidden'); lastDeletedDue = null; }, 8000);
                 }
             }
         }
@@ -1149,85 +1254,143 @@
             data.push(lastDeletedDue);
             localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
             loadDueData();
-            
-            // Hide button
-            const btn = document.getElementById('btn-undo-due');
-            if(btn) btn.classList.add('hidden');
+            document.getElementById('btn-undo-due').classList.add('hidden');
             lastDeletedDue = null;
         }
 
         function loadDueData() {
             const data = getDueData();
             
-            const custContainer = document.getElementById('due-table-customer');
-            const payContainer = document.getElementById('due-table-payable');
-            const bankContainer = document.getElementById('due-table-bank');
-            
-            if(custContainer) custContainer.innerHTML = '';
-            if(payContainer) payContainer.innerHTML = '';
-            if(bankContainer) bankContainer.innerHTML = '';
-
+            // Stats Calculation (Always all data)
             let totalReceive = 0, totalPay = 0, totalBank = 0;
-
             data.forEach(item => {
-                const row = document.createElement('tr');
                 const amt = parseFloat(item.amount) || 0;
-
-                if (item.type === 'customer') {
-                    if (item.status === 'Pending') totalReceive += amt;
-                    row.innerHTML = `
-                        <td><input type="text" class="w-full p-1 border rounded" value="${item.name}" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
-                        <td><input type="number" step="0.001" class="w-full p-1 border rounded" value="${item.amount}" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
-                        <td><input type="date" class="w-full p-1 border rounded" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
-                        <td>
-                            <select class="w-full p-1 border rounded ${item.status === 'Paid' ? 'text-green-600 font-bold' : 'text-orange-600'}" onchange="updateDueItem(${item.id}, 'status', this.value)">
-                                <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                                <option value="Paid" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
-                            </select>
-                        </td>
-                        <td class="text-center"><button onclick="deleteDueItem(${item.id})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
-                    `;
-                    if(custContainer) custContainer.appendChild(row);
-                } else if (item.type === 'payable') {
-                    if (item.status === 'Pending') totalPay += amt;
-                    row.innerHTML = `
-                        <td><input type="text" class="w-full p-1 border rounded" value="${item.name}" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
-                        <td><input type="number" step="0.001" class="w-full p-1 border rounded" value="${item.amount}" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
-                        <td><input type="date" class="w-full p-1 border rounded" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
-                        <td>
-                            <select class="w-full p-1 border rounded ${item.status === 'Paid' ? 'text-green-600 font-bold' : 'text-red-600'}" onchange="updateDueItem(${item.id}, 'status', this.value)">
-                                <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                                <option value="Paid" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
-                            </select>
-                        </td>
-                        <td class="text-center"><button onclick="deleteDueItem(${item.id})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
-                    `;
-                    if(payContainer) payContainer.appendChild(row);
-                } else if (item.type === 'bank') {
-                    totalBank += amt;
-                    row.innerHTML = `
-                        <td><input type="date" class="w-full p-1 border rounded" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
-                        <td><input type="text" class="w-full p-1 border rounded" value="${item.bankName}" placeholder="Bank Name" onchange="updateDueItem(${item.id}, 'bankName', this.value)"></td>
-                        <td><input type="number" step="0.001" class="w-full p-1 border rounded text-green-700 font-bold" value="${item.amount}" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
-                        <td class="text-center"><button onclick="deleteDueItem(${item.id})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
-                    `;
-                    if(bankContainer) bankContainer.appendChild(row);
-                }
+                if (item.type === 'customer' && item.status === 'Pending') totalReceive += amt;
+                if (item.type === 'payable' && item.status === 'Pending') totalPay += amt;
+                if (item.type === 'bank') totalBank += amt;
             });
-
-            const tReceive = document.getElementById('due-total-receive'); if(tReceive) tReceive.textContent = totalReceive.toFixed(3);
-            const tPay = document.getElementById('due-total-pay'); if(tPay) tPay.textContent = totalPay.toFixed(3);
-            const tBank = document.getElementById('due-total-bank'); if(tBank) tBank.textContent = totalBank.toFixed(3);
             
-            // Calc Balance
+            document.getElementById('due-total-receive').textContent = totalReceive.toFixed(3);
+            document.getElementById('due-total-pay').textContent = totalPay.toFixed(3);
+            document.getElementById('due-total-bank').textContent = totalBank.toFixed(3);
+            
             const netBalance = (totalReceive + totalBank) - totalPay;
             const balEl = document.getElementById('due-total-balance');
             if(balEl) {
                 balEl.textContent = netBalance.toFixed(3);
                 balEl.className = `text-2xl font-black ${netBalance >= 0 ? 'text-gray-800' : 'text-red-600'}`;
             }
+
+            // Containers
+            const custContainer = document.getElementById('due-table-customer');
+            const payContainer = document.getElementById('due-table-payable');
+            const bankContainer = document.getElementById('due-table-bank');
+            const historyContainer = document.getElementById('due-table-history');
+            const bankHistoryContainer = document.getElementById('due-table-bank-history');
+            
+            if(custContainer) custContainer.innerHTML = '';
+            if(payContainer) payContainer.innerHTML = '';
+            if(bankContainer) bankContainer.innerHTML = '';
+            if(historyContainer) historyContainer.innerHTML = '';
+            if(bankHistoryContainer) bankHistoryContainer.innerHTML = '';
+
+            // Render Rows based on View Mode
+            // Sort by date desc
+            data.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            data.forEach(item => {
+                const amt = parseFloat(item.amount) || 0;
+                
+                // ACTIVE VIEW RENDER
+                if (dueViewMode === 'active') {
+                    if (item.type === 'bank') {
+                        // Show recent 5 banks in active
+                        if (bankContainer.childElementCount < 5) {
+                            bankContainer.appendChild(createBankRow(item));
+                        }
+                    } else if (item.status === 'Pending') {
+                        // Show all pending
+                        const row = createEditableRow(item);
+                        if (item.type === 'customer') custContainer.appendChild(row);
+                        else payContainer.appendChild(row);
+                    }
+                }
+
+                // HISTORY VIEW RENDER
+                if (dueViewMode === 'history') {
+                    if (item.type === 'bank') {
+                        bankHistoryContainer.appendChild(createBankRow(item));
+                    } else if (item.status === 'Paid') {
+                        historyContainer.appendChild(createHistoryRow(item));
+                    }
+                }
+            });
             
             lucide.createIcons();
+        }
+
+        function createEditableRow(item) {
+            const row = document.createElement('tr');
+            
+            // Conditional HTML for Phone column (Only for Customer)
+            let phoneHtml = '';
+            if (item.type === 'customer') {
+                phoneHtml = `<td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.phone || ''}" placeholder="968..." onchange="updateDueItem(${item.id}, 'phone', this.value)"></td>`;
+            }
+
+            row.innerHTML = `
+                <td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.name}" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
+                ${phoneHtml}
+                <td><input type="number" step="0.001" class="w-full p-1 border rounded bg-white text-gray-800 text-sm font-mono" value="${item.amount}" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
+                <td><input type="date" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
+                <td>
+                    <select class="w-full p-1 border rounded bg-white text-sm ${item.status === 'Paid' ? 'text-green-600 font-bold' : 'text-orange-600'}" onchange="updateDueItem(${item.id}, 'status', this.value)">
+                        <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="Paid" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
+                    </select>
+                </td>
+                <td class="text-center"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+            `;
+            return row;
+        }
+
+        function createBankRow(item) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="date" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
+                <td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.bankName}" placeholder="Bank Name" onchange="updateDueItem(${item.id}, 'bankName', this.value)"></td>
+                <td><input type="number" step="0.001" class="w-full p-1 border rounded bg-white text-green-700 font-bold text-sm font-mono" value="${item.amount}" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
+                <td class="text-center"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+            `;
+            return row;
+        }
+
+        function createHistoryRow(item) {
+            const row = document.createElement('tr');
+            const typeLabel = item.type === 'customer' ? '<span class="text-blue-600 font-bold text-xs">Receive</span>' : '<span class="text-red-600 font-bold text-xs">Payable</span>';
+            const dateValue = item.paymentDate || new Date().toISOString().split('T')[0]; // Default to today if missing
+            
+            // Display phone if available in history
+            let displayDetails = item.name;
+            if (item.type === 'customer' && item.phone) {
+                displayDetails += ` <span class="text-xs text-gray-500">(${item.phone})</span>`;
+            }
+
+            row.innerHTML = `
+                <td class="text-center">${typeLabel}</td>
+                <td class="font-medium">${displayDetails}</td>
+                <td class="font-mono">${parseFloat(item.amount).toFixed(3)}</td>
+                <td class="text-xs text-gray-500">${item.date}</td>
+                <td><input type="date" class="w-full p-1 border rounded bg-gray-50 text-xs" value="${dateValue}" onchange="updateDueItem(${item.id}, 'paymentDate', this.value)"></td>
+                <td>
+                    <select class="w-full p-1 border rounded bg-green-50 text-green-700 text-xs font-bold" onchange="updateDueItem(${item.id}, 'status', this.value)">
+                        <option value="Paid" selected>Paid</option>
+                        <option value="Pending">Revert to Pending</option>
+                    </select>
+                </td>
+                <td class="text-center"><button onclick="deleteDueItem(${item.id})" class="text-gray-400 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button></td>
+            `;
+            return row;
         }
 
         // --- DASHBOARD LOGIC ---
