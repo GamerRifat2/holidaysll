@@ -8,322 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- FIREBASE & HYBRID SYNC ENGINE -->
-    <script type="module">
-        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- CONFIGURATION ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyArysNQse_b9nJsq7FctkUOxjUCQX46bKo",
-            authDomain: "iday-travels.firebaseapp.com",
-            projectId: "iday-travels",
-            storageBucket: "iday-travels.firebasestorage.app",
-            messagingSenderId: "145637577276",
-            appId: "1:145637577276:web:5419bf357a2900a3d96939",
-            measurementId: "G-T3B54CYJ2L"
-        };
-
-        // --- INITIALIZE FIREBASE (ROBUST) ---
-        let app, auth, db;
-        const appName = "HolidaySystem_" + new Date().getTime();
-        
-        try {
-            if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("PASTE_YOUR")) {
-                app = initializeApp(firebaseConfig, appName);
-                auth = getAuth(app);
-                db = getFirestore(app);
-            }
-        } catch (e) {
-            console.warn("Firebase Init Skipped (Offline Mode)");
-        }
-        
-        const appId = "holiday-travels-system-v1";
-
-        // Global State & Mode
-        window.state = {
-            ledger: [], dues: [], expenses: [], tasks: [],
-            salamReminders: [], salamHistory: [], invoiceCounter: 9876
-        };
-        let isOffline = false;
-
-        // Local Storage Keys Mapping
-        const LS_KEYS = {
-            ledger: 'holiday_ledger_data',
-            dues: 'holiday_due_data',
-            expenses: 'holiday_expense_data',
-            tasks: 'holiday_notes_data',
-            salam_reminders: 'holiday_salam_data',
-            salam_history: 'holiday_salam_history'
-        };
-
-        // --- OFFLINE MODE HANDLERS ---
-        window.enableOfflineMode = function(reason) {
-            if(isOffline) return; // Already offline
-            console.warn("Switching to Offline Mode:", reason);
-            isOffline = true;
-            updateStatus(false, reason);
-            window.loadFromLocalStorage();
-        }
-
-        function updateStatus(online, msg="") {
-            const el = document.getElementById('cloud-status');
-            if(el) {
-                if (online) {
-                    el.innerHTML = `<span class="flex items-center gap-1 text-green-600"><i data-lucide="cloud" class="w-4 h-4"></i> Online</span>`;
-                } else {
-                    el.innerHTML = `<span class="flex items-center gap-1 text-gray-500" title="${msg}"><i data-lucide="cloud-off" class="w-4 h-4"></i> Offline</span>`;
-                }
-                lucide.createIcons();
-            }
-        }
-
-        // --- OFFLINE LISTENERS (MANUAL LOAD) ---
-        window.loadFromLocalStorage = function() {
-            try {
-                window.state.ledger = JSON.parse(localStorage.getItem(LS_KEYS.ledger) || '[]');
-                window.state.dues = JSON.parse(localStorage.getItem(LS_KEYS.dues) || '[]');
-                window.state.expenses = JSON.parse(localStorage.getItem(LS_KEYS.expenses) || '[]');
-                window.state.tasks = JSON.parse(localStorage.getItem(LS_KEYS.tasks) || '[]');
-                window.state.salamReminders = JSON.parse(localStorage.getItem(LS_KEYS.salam_reminders) || '[]');
-                window.state.salamHistory = JSON.parse(localStorage.getItem(LS_KEYS.salam_history) || '[]');
-                window.state.invoiceCounter = parseInt(localStorage.getItem('holidayTravelsInvoiceNum') || '9876');
-                window.refreshActiveTab();
-            } catch(e) {
-                console.error("Local storage error", e);
-            }
-        }
-
-        // --- INITIALIZATION ---
-        async function initApp() {
-            // Safety check if app failed to init
-            if (!app || !auth) {
-                return window.enableOfflineMode("Start Offline");
-            }
-
-            try {
-                // Try Cloud Connection
-                if (!auth.currentUser) {
-                    await signInAnonymously(auth);
-                }
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        console.log("Connected to Cloud");
-                        updateStatus(true);
-                        setupCloudListeners();
-                    } else {
-                        window.enableOfflineMode("Auth lost");
-                    }
-                });
-            } catch (error) {
-                // Silent failure - just go offline
-                console.warn("Cloud connection skipped:", error.code);
-                window.enableOfflineMode("Offline Fallback");
-            }
-        }
-
-        // --- CLOUD LISTENERS ---
-        function setupCloudListeners() {
-            const listen = (collName, stateKey) => {
-                const q = query(collection(db, 'artifacts', appId, 'public', 'data', collName));
-                onSnapshot(q, (snapshot) => {
-                    const items = [];
-                    snapshot.forEach(doc => items.push(doc.data()));
-                    window.state[stateKey] = items;
-                    // Also sync to local storage for backup
-                    if(LS_KEYS[collName]) localStorage.setItem(LS_KEYS[collName], JSON.stringify(items));
-                    window.refreshActiveTab(); 
-                }, (err) => {
-                    // Silent fail for listeners too
-                    console.warn("Listener inactive:", collName);
-                    window.enableOfflineMode("Listener failed");
-                });
-            };
-
-            listen('ledger', 'ledger');
-            listen('dues', 'dues');
-            listen('expenses', 'expenses');
-            listen('tasks', 'tasks');
-            listen('salam_reminders', 'salamReminders');
-            listen('salam_history', 'salamHistory');
-            
-            // Settings
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'settings'), (snap) => {
-                snap.forEach(doc => {
-                    if(doc.id === 'invoice_counter') {
-                        window.state.invoiceCounter = doc.data().value;
-                        localStorage.setItem('holidayTravelsInvoiceNum', doc.data().value);
-                        // UI update if needed
-                        const el = document.getElementById('invoice-number');
-                        if(el && document.activeElement !== el) { 
-                            el.textContent = String(window.state.invoiceCounter).padStart(4, '0');
-                        }
-                    }
-                });
-            }, (err) => {
-                 // Ignore settings error
-            });
-        }
-        
-        // --- UNIFIED CRUD ACTIONS ---
-        window.cloudAdd = async (collName, data) => {
-            if(!data.id) data.id = Date.now();
-            
-            // 1. Update Local State Immediately (Optimistic UI)
-            const stateKey = getStateKey(collName);
-            if(stateKey) {
-                const arr = window.state[stateKey];
-                const existingIdx = arr.findIndex(i => i.id === data.id);
-                if(existingIdx > -1) arr[existingIdx] = data; else arr.push(data);
-                // Save to LS
-                if(LS_KEYS[collName]) localStorage.setItem(LS_KEYS[collName], JSON.stringify(arr));
-            }
-
-            // 2. Try Cloud if Online
-            if (!isOffline && db) {
-                try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', collName, data.id.toString()), data);
-                } catch (e) {
-                    console.warn("Cloud save failed (Offline Mode)");
-                }
-            }
-            window.refreshActiveTab();
-        };
-
-        window.cloudDelete = async (collName, id) => {
-            if(!id) return;
-
-            // 1. Update Local
-            const stateKey = getStateKey(collName);
-            if(stateKey) {
-                window.state[stateKey] = window.state[stateKey].filter(i => i.id !== id);
-                if(LS_KEYS[collName]) localStorage.setItem(LS_KEYS[collName], JSON.stringify(window.state[stateKey]));
-            }
-
-            // 2. Try Cloud
-            if (!isOffline && db) {
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', collName, id.toString()));
-                } catch (e) { console.warn("Cloud delete failed"); }
-            }
-            window.refreshActiveTab();
-        };
-        
-        window.cloudUpdateCounter = async (newVal) => {
-            window.state.invoiceCounter = newVal;
-            localStorage.setItem('holidayTravelsInvoiceNum', newVal);
-            if(!isOffline && db) {
-                try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'invoice_counter'), { value: newVal, id: 'invoice_counter' });
-                } catch(e) {}
-            }
-        };
-
-        function getStateKey(collName) {
-            if(collName === 'ledger') return 'ledger';
-            if(collName === 'dues') return 'dues';
-            if(collName === 'expenses') return 'expenses';
-            if(collName === 'tasks') return 'tasks';
-            if(collName === 'salam_reminders') return 'salamReminders';
-            if(collName === 'salam_history') return 'salamHistory';
-            return null;
-        }
-
-        // --- REFRESH UI ROUTER ---
-        window.refreshActiveTab = function() {
-             if(typeof window.loadHisab === 'function' && window.currentTab === 'hisab') window.loadHisab();
-             if(typeof window.updateDashboard === 'function' && window.currentTab === 'dashboard') window.updateDashboard();
-             if(typeof window.loadDueData === 'function' && window.currentTab === 'due') window.loadDueData();
-             if(typeof window.loadExpense === 'function' && window.currentTab === 'expense') window.loadExpense();
-             if(window.currentTab === 'notes') { 
-                 if(typeof window.loadGeneralNotes === 'function') window.loadGeneralNotes();
-                 if(typeof window.loadSalamReminders === 'function') window.loadSalamReminders();
-                 if(typeof window.loadSalamHistory === 'function') window.loadSalamHistory();
-             }
-        }
-
-        // --- ENHANCED RESTORE FUNCTION ---
-        window.restoreData = (input) => {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    
-                    if(isOffline) {
-                        // OFFLINE RESTORE (Wipe & Replace LocalStorage)
-                        if(!confirm("⚠️ WARNING: Offline Restore.\nThis will DELETE ALL current local data and replace it with this backup.\n\nProceed?")) {
-                            input.value = ''; return;
-                        }
-                        
-                        const keysToRemove = [];
-                        for (let i = 0; i < localStorage.length; i++) {
-                            const key = localStorage.key(i);
-                            if (key.startsWith('holiday_') || key === 'holidayTravelsInvoiceNum') {
-                                keysToRemove.push(key);
-                            }
-                        }
-                        keysToRemove.forEach(k => localStorage.removeItem(k));
-                        Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
-                        alert('Data Restored Successfully (Offline)!');
-                        location.reload();
-                        
-                    } else {
-                        // CLOUD IMPORT RESTORE
-                        if(!confirm("☁️ CLOUD MODE DETECTED.\n\nThis will UPLOAD your backup data to the Cloud Database.\n\nDo you want to proceed with Cloud Import?")) {
-                            input.value = ''; return;
-                        }
-
-                        // Map LocalStorage keys to Cloud Collections
-                        const keyMap = {
-                            'holiday_ledger_data': 'ledger',
-                            'holiday_due_data': 'dues',
-                            'holiday_expense_data': 'expenses',
-                            'holiday_notes_data': 'tasks',
-                            'holiday_salam_data': 'salam_reminders',
-                            'holiday_salam_history': 'salam_history'
-                        };
-
-                        let count = 0;
-                        for (const [lsKey, collName] of Object.entries(keyMap)) {
-                            if (data[lsKey]) {
-                                let items = [];
-                                try { items = JSON.parse(data[lsKey]); } catch(e) { items = []; }
-                                
-                                if (Array.isArray(items)) {
-                                    for (const item of items) {
-                                        await window.cloudAdd(collName, item);
-                                        count++;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Handle Settings (Invoice Num)
-                        if(data['holidayTravelsInvoiceNum']) {
-                            await window.cloudUpdateCounter(parseInt(data['holidayTravelsInvoiceNum']));
-                        }
-
-                        alert(`Cloud Restore Complete! ${count} items uploaded to cloud.`);
-                        input.value = ''; // Reset input
-                    }
-
-                } catch(e) { 
-                    console.error(e);
-                    alert('Error restoring file. Check console for details.'); 
-                }
-            };
-            reader.readAsText(file);
-        };
-        
-        // Start
-        initApp();
-    </script>
-    
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; transition: background-color 0.3s, color 0.3s; }
         .arabic-text { font-family: 'Cairo', sans-serif; direction: rtl; }
@@ -332,6 +16,7 @@
         body.dark { background-color: #111827; color: #e5e7eb; }
         body.dark .bg-white { background-color: #1f2937; border-color: #374151; color: #e5e7eb; }
         body.dark .bg-gray-50 { background-color: #111827; border-color: #374151; }
+        body.dark .bg-gray-100 { background-color: #374151; }
         body.dark input, body.dark select, body.dark textarea { background-color: #374151; color: white; border-color: #4b5563; }
         body.dark .text-gray-800 { color: #f3f4f6; }
         body.dark .text-gray-700 { color: #d1d5db; }
@@ -466,7 +151,6 @@
         <div id="global-header" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
                 <img id="header-logo-img" src="LOGO.png" alt="Holiday Travels" class="h-12 w-auto object-contain">
-                <div id="cloud-status" class="text-xs font-bold px-2 py-1 rounded bg-gray-100">Checking...</div>
             </div>
             <div class="flex gap-2 w-full md:w-auto items-center">
                 <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 transition-colors mr-2" title="Toggle Dark Mode">
@@ -474,9 +158,6 @@
                     <i data-lucide="sun" class="w-5 h-5 text-yellow-400 hidden dark:block"></i>
                 </button>
                 
-                <button onclick="uploadLocalToCloud()" class="bg-purple-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-purple-700 flex items-center gap-2 shadow-sm">
-                    <i data-lucide="cloud-upload" class="w-4 h-4"></i> Upload Local Data to Cloud
-                </button>
                 <button onclick="backupData()" class="flex-1 md:flex-none bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-700 flex items-center justify-center gap-2 transition-all shadow-sm">
                     <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup
                 </button>
@@ -1814,14 +1495,10 @@
                 phoneHtml = `<td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.phone || ''}" placeholder="968..." onchange="updateDueItem(${item.id}, 'phone', this.value)"></td>`;
             }
 
-            // Fix for existing data showing "Name" or "0"
-            const nameVal = item.name === 'Name' ? '' : item.name;
-            const amtVal = (item.amount === 0 || item.amount === '0') ? '' : item.amount;
-
             row.innerHTML = `
-                <td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${nameVal}" placeholder="Name" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
+                <td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.name === 'Name' ? '' : item.name}" placeholder="Name" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
                 ${phoneHtml}
-                <td><input type="number" step="0.001" class="w-full p-1 border rounded bg-white text-gray-800 text-sm font-mono" value="${amtVal}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
+                <td><input type="number" step="0.001" class="w-full p-1 border rounded bg-white text-gray-800 text-sm font-mono" value="${(item.amount === 0 || item.amount === '0') ? '' : item.amount}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
                 <td><input type="date" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
                 <td>
                     <select class="w-full p-1 border rounded bg-white text-sm ${item.status === 'Paid' ? 'text-green-600 font-bold' : 'text-orange-600'}" onchange="updateDueItem(${item.id}, 'status', this.value)">
@@ -1836,13 +1513,10 @@
 
         function createBankRow(item) {
             const row = document.createElement('tr');
-            const nameVal = item.bankName === 'Bank Name' ? '' : item.bankName;
-            const amtVal = (item.amount === 0 || item.amount === '0') ? '' : item.amount;
-
             row.innerHTML = `
                 <td><input type="date" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
-                <td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${nameVal}" placeholder="Bank Name" onchange="updateDueItem(${item.id}, 'bankName', this.value)"></td>
-                <td><input type="number" step="0.001" class="w-full p-1 border rounded bg-white text-green-700 font-bold text-sm font-mono" value="${amtVal}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
+                <td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.bankName === 'Bank Name' ? '' : item.bankName}" placeholder="Bank Name" onchange="updateDueItem(${item.id}, 'bankName', this.value)"></td>
+                <td><input type="number" step="0.001" class="w-full p-1 border rounded bg-white text-green-700 font-bold text-sm font-mono" value="${(item.amount === 0 || item.amount === '0') ? '' : item.amount}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
                 <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
             `;
             return row;
@@ -2121,9 +1795,7 @@
                     
                     alert('Data Replaced Successfully!');
                     location.reload();
-                } catch(e) { 
-                    alert('Invalid File Format. Please select a valid backup JSON.'); 
-                }
+                } catch(e) { alert('Invalid File'); }
             };
             reader.readAsText(file);
         };
