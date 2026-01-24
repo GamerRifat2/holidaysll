@@ -3,270 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Holiday Travels - Management System</title>
+    <title>Holiday Travels - Cloud Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- FIREBASE & HYBRID SYNC ENGINE -->
-    <script type="module">
-        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- CONFIGURATION ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyArysNQse_b9nJsq7FctkUOxjUCQX46bKo",
-            authDomain: "iday-travels.firebaseapp.com",
-            projectId: "iday-travels",
-            storageBucket: "iday-travels.firebasestorage.app",
-            messagingSenderId: "145637577276",
-            appId: "1:145637577276:web:5419bf357a2900a3d96939",
-            measurementId: "G-T3B54CYJ2L"
-        };
-
-        // --- INITIALIZE FIREBASE (ROBUST) ---
-        let app, auth, db;
-        const appName = "HolidaySystem_" + new Date().getTime();
-        
-        try {
-            if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("PASTE_YOUR")) {
-                app = initializeApp(firebaseConfig, appName);
-                auth = getAuth(app);
-                db = getFirestore(app);
-            }
-        } catch (e) {
-            console.warn("Firebase Init Skipped (Offline Mode)");
-        }
-        
-        const appId = "holiday-travels-system-v1";
-
-        // Global State & Mode
-        window.state = {
-            ledger: [], dues: [], expenses: [], tasks: [],
-            salamReminders: [], salamHistory: [], invoiceCounter: 9876
-        };
-        let isOffline = false;
-
-        // Local Storage Keys Mapping
-        const LS_KEYS = {
-            ledger: 'holiday_ledger_data',
-            dues: 'holiday_due_data',
-            expenses: 'holiday_expense_data',
-            tasks: 'holiday_notes_data',
-            salam_reminders: 'holiday_salam_data',
-            salam_history: 'holiday_salam_history'
-        };
-
-        // --- OFFLINE MODE HANDLERS ---
-        window.enableOfflineMode = function(reason) {
-            if(isOffline) return; // Already offline
-            console.warn("Switching to Offline Mode:", reason);
-            isOffline = true;
-            updateStatus(false, reason);
-            window.loadFromLocalStorage();
-        }
-
-        function updateStatus(online, msg="") {
-            const el = document.getElementById('cloud-status');
-            if(el) {
-                if (online) {
-                    el.innerHTML = `<span class="flex items-center gap-1 text-green-600"><i data-lucide="cloud" class="w-4 h-4"></i> Online</span>`;
-                } else {
-                    el.innerHTML = `<span class="flex items-center gap-1 text-gray-500" title="${msg}"><i data-lucide="cloud-off" class="w-4 h-4"></i> Offline</span>`;
-                }
-                lucide.createIcons();
-            }
-        }
-
-        // --- OFFLINE LISTENERS (MANUAL LOAD) ---
-        window.loadFromLocalStorage = function() {
-            try {
-                window.state.ledger = JSON.parse(localStorage.getItem(LS_KEYS.ledger) || '[]');
-                window.state.dues = JSON.parse(localStorage.getItem(LS_KEYS.dues) || '[]');
-                window.state.expenses = JSON.parse(localStorage.getItem(LS_KEYS.expenses) || '[]');
-                window.state.tasks = JSON.parse(localStorage.getItem(LS_KEYS.tasks) || '[]');
-                window.state.salamReminders = JSON.parse(localStorage.getItem(LS_KEYS.salam_reminders) || '[]');
-                window.state.salamHistory = JSON.parse(localStorage.getItem(LS_KEYS.salam_history) || '[]');
-                window.state.invoiceCounter = parseInt(localStorage.getItem('holidayTravelsInvoiceNum') || '9876');
-                window.refreshActiveTab();
-            } catch(e) {
-                console.error("Local storage error", e);
-            }
-        }
-
-        // --- INITIALIZATION ---
-        async function initApp() {
-            if (!app || !auth) {
-                return window.enableOfflineMode("Start Offline");
-            }
-
-            try {
-                if (!auth.currentUser) {
-                    await signInAnonymously(auth);
-                }
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        console.log("Connected to Cloud");
-                        updateStatus(true);
-                        setupCloudListeners();
-                    } else {
-                        window.enableOfflineMode("Auth lost");
-                    }
-                });
-            } catch (error) {
-                console.warn("Cloud connection skipped:", error.code);
-                window.enableOfflineMode("Offline Fallback");
-            }
-        }
-
-        // --- CLOUD LISTENERS ---
-        function setupCloudListeners() {
-            const listen = (collName, stateKey) => {
-                const q = query(collection(db, 'artifacts', appId, 'public', 'data', collName));
-                onSnapshot(q, (snapshot) => {
-                    const items = [];
-                    snapshot.forEach(doc => items.push(doc.data()));
-                    window.state[stateKey] = items;
-                    if(LS_KEYS[collName]) localStorage.setItem(LS_KEYS[collName], JSON.stringify(items));
-                    window.refreshActiveTab(); 
-                }, (err) => {
-                    console.warn("Listener inactive:", collName);
-                    window.enableOfflineMode("Listener failed");
-                });
-            };
-
-            listen('ledger', 'ledger');
-            listen('dues', 'dues');
-            listen('expenses', 'expenses');
-            listen('tasks', 'tasks');
-            listen('salam_reminders', 'salamReminders');
-            listen('salam_history', 'salamHistory');
-            
-            // Settings
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'settings'), (snap) => {
-                snap.forEach(doc => {
-                    if(doc.id === 'invoice_counter') {
-                        window.state.invoiceCounter = doc.data().value;
-                        localStorage.setItem('holidayTravelsInvoiceNum', doc.data().value);
-                        const el = document.getElementById('invoice-number');
-                        if(el && document.activeElement !== el) { 
-                            el.textContent = String(window.state.invoiceCounter).padStart(4, '0');
-                        }
-                    }
-                });
-            }, (err) => {});
-        }
-        
-        // --- UNIFIED CRUD ACTIONS ---
-        window.cloudAdd = async (collName, data) => {
-            if(!data.id) data.id = Date.now();
-            
-            const stateKey = getStateKey(collName);
-            if(stateKey) {
-                const arr = window.state[stateKey];
-                const existingIdx = arr.findIndex(i => i.id === data.id);
-                if(existingIdx > -1) arr[existingIdx] = data; else arr.push(data);
-                if(LS_KEYS[collName]) localStorage.setItem(LS_KEYS[collName], JSON.stringify(arr));
-            }
-
-            if (!isOffline && db) {
-                try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', collName, data.id.toString()), data);
-                } catch (e) {
-                    console.warn("Cloud save failed (Offline Mode)");
-                }
-            }
-            window.refreshActiveTab();
-        };
-
-        window.cloudDelete = async (collName, id) => {
-            if(!id) return;
-
-            const stateKey = getStateKey(collName);
-            if(stateKey) {
-                window.state[stateKey] = window.state[stateKey].filter(i => i.id !== id);
-                if(LS_KEYS[collName]) localStorage.setItem(LS_KEYS[collName], JSON.stringify(window.state[stateKey]));
-            }
-
-            if (!isOffline && db) {
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', collName, id.toString()));
-                } catch (e) { console.warn("Cloud delete failed"); }
-            }
-            window.refreshActiveTab();
-        };
-        
-        window.cloudUpdateCounter = async (newVal) => {
-            window.state.invoiceCounter = newVal;
-            localStorage.setItem('holidayTravelsInvoiceNum', newVal);
-            if(!isOffline && db) {
-                try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'invoice_counter'), { value: newVal, id: 'invoice_counter' });
-                } catch(e) {}
-            }
-        };
-
-        function getStateKey(collName) {
-            if(collName === 'ledger') return 'ledger';
-            if(collName === 'dues') return 'dues';
-            if(collName === 'expenses') return 'expenses';
-            if(collName === 'tasks') return 'tasks';
-            if(collName === 'salam_reminders') return 'salamReminders';
-            if(collName === 'salam_history') return 'salamHistory';
-            return null;
-        }
-
-        window.refreshActiveTab = function() {
-             if(typeof window.loadHisab === 'function' && window.currentTab === 'hisab') window.loadHisab();
-             if(typeof window.updateDashboard === 'function' && window.currentTab === 'dashboard') window.updateDashboard();
-             if(typeof window.loadDueData === 'function' && window.currentTab === 'due') window.loadDueData();
-             if(typeof window.loadExpense === 'function' && window.currentTab === 'expense') window.loadExpense();
-             if(window.currentTab === 'notes') { 
-                 if(typeof window.loadGeneralNotes === 'function') window.loadGeneralNotes();
-                 if(typeof window.loadSalamReminders === 'function') window.loadSalamReminders();
-                 if(typeof window.loadSalamHistory === 'function') window.loadSalamHistory();
-             }
-        }
-        
-        initApp();
-    </script>
-    
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; transition: background-color 0.3s, color 0.3s; }
         .arabic-text { font-family: 'Cairo', sans-serif; direction: rtl; }
         
+        /* Dark Mode Styles */
         body.dark { background-color: #111827; color: #e5e7eb; }
         body.dark .bg-white { background-color: #1f2937; border-color: #374151; color: #e5e7eb; }
         body.dark .bg-gray-50 { background-color: #111827; border-color: #374151; }
         body.dark input, body.dark select, body.dark textarea { background-color: #374151; color: white; border-color: #4b5563; }
         body.dark .text-gray-800 { color: #f3f4f6; }
-        body.dark .text-gray-700 { color: #d1d5db; }
         body.dark .text-gray-600 { color: #9ca3af; }
-        body.dark .text-gray-500 { color: #9ca3af; }
-        body.dark .border-gray-200 { border-color: #374151; }
-        body.dark .border-gray-300 { border-color: #4b5563; }
-        body.dark .hover\:bg-gray-50:hover { background-color: #374151; }
         body.dark .excel-table th { background-color: #374151; color: #e5e7eb; border-color: #4b5563; }
         body.dark .excel-table td { border-color: #4b5563; }
-        body.dark .excel-table tr:nth-child(even) { background-color: #1f2937; } 
-        body.dark .excel-table tr:hover { background-color: #374151; }
-        
-        /* Dark Mode Colors */
-        body.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.2); }
-        body.dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.2); }
-        body.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); }
-        body.dark .bg-purple-50 { background-color: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.2); }
-        body.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.1); border-color: rgba(249, 115, 22, 0.2); }
-        body.dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.1); border-color: rgba(234, 179, 8, 0.2); }
-        body.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.2); }
 
+        /* Force Header to Stay White in Dark Mode */
         body.dark #global-header { background-color: white !important; border-color: #e5e7eb !important; }
         body.dark #global-header .text-gray-800 { color: #1f2937 !important; } 
-        body.dark #global-header .text-gray-600 { color: #4b5563 !important; }
-        body.dark #global-header .text-gray-500 { color: #6b7280 !important; }
 
         /* Invoice Paper */
         .invoice-paper {
@@ -276,13 +34,22 @@
         }
         body.dark .invoice-paper { background-color: white; color: black; }
         body.dark .invoice-paper .editable { color: black; }
-        body.dark .invoice-paper input { background-color: transparent; color: black; border-color: #ddd; }
+        body.dark .invoice-paper div[contenteditable="true"] { outline: none; }
+        body.dark .invoice-paper div[contenteditable="true"]:focus { background-color: #f9fafb; border-radius: 4px; }
 
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .paid-seal {
+        /* Excel-like Table Styles */
+        .excel-table { border-collapse: collapse; width: 100%; font-size: 11px; } 
+        .excel-table th, .excel-table td { border: 1px solid #d1d5db; padding: 6px 4px; }
+        .excel-table th { background-color: #f3f4f6; font-weight: 700; text-align: center; white-space: nowrap; }
+        .excel-table tr:nth-child(even) { background-color: #f9fafb; }
+        .excel-table tr:hover { background-color: #eff6ff; cursor: pointer; }
+        .row-selected { background-color: #fff7ed !important; border-left: 3px solid #f97316; }
+
+        .paid-seal { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg);
             border: 0.4rem solid #22c55e; border-radius: 0.8rem; padding: 0.5rem 2rem;
             text-align: center; opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.3s ease;
@@ -290,801 +57,691 @@
         }
         .paid-seal.is-visible { opacity: 0.4 !important; display: block !important; }
 
-        .excel-table { border-collapse: collapse; width: 100%; font-size: 11px; } 
-        .excel-table th, .excel-table td { border: 1px solid #d1d5db; padding: 6px 4px; }
-        .excel-table th { background-color: #f3f4f6; font-weight: 700; text-align: center; white-space: nowrap; }
-        .excel-table tr:nth-child(even) { background-color: #f9fafb; }
-        .excel-table tr:hover { background-color: #eff6ff; cursor: pointer; }
-        .excel-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
-        .row-selected { background-color: #fff7ed !important; border-left: 3px solid #f97316; }
-        body.dark .row-selected { background-color: rgba(249, 115, 22, 0.2) !important; }
-        
-        .print-header { display: none; }
+        .print-only-header { display: none; }
 
-        /* Print Settings */
         @media print {
-            /* PORTRAIT A4 */
-            @page { margin: 0; size: A4 portrait; } 
-            
-            body { background: white !important; color: black !important; margin: 0; padding: 0; }
-            .no-print, .controls, #login-screen, .tabs-nav, #global-header, .add-row-btn { display: none !important; }
-            
+            @page { margin: 0; size: A4 landscape; } 
+            .no-print, .tabs-nav, #global-header, #login-screen { display: none !important; }
+            .invoice-paper { box-shadow: none; margin: 0; width: 100%; padding: 5mm; min-height: auto; height: auto; }
             .tab-content { display: none !important; }
             .tab-content.active { display: block !important; }
-
-            .invoice-paper { box-shadow: none; margin: 0; width: 100%; max-width: 100%; padding: 5mm; min-height: auto; height: auto; }
+            body { background: white !important; color: black !important; }
             
-            /* Invoice Layout */
-            #tab-invoice.active header { flex-direction: row !important; display: flex !important; }
-            #tab-invoice.active header > div { width: 33.33% !important; }
-            #tab-invoice.active .grid { display: grid !important; grid-template-columns: 1fr 1fr !important; }
-            
-            #tab-hisab.active { width: 100%; }
-            #tab-expense.active { width: 100%; }
-            #tab-notes.active { width: 100%; }
-            
-            #tab-due.active .print-header { display: flex !important; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
-            #tab-due.active .print-header img { height: 60px; }
-            #tab-due.active .print-header .company-details { text-align: right; }
-            #tab-due.active .grid { display: block !important; } 
-            #tab-due.active .grid > div { margin-bottom: 15px; border: 1px solid #000; page-break-inside: avoid; background: #fff !important; } 
-            #tab-due.active .grid-cols-1 { display: block !important; } 
-            #tab-due.active #due-active-view { display: block !important; }
-            #tab-due.active #due-active-view > div { margin-bottom: 30px; page-break-inside: avoid; } 
-            
-            .excel-table th, .excel-table td { border: 1px solid #000 !important; font-size: 10px; color: black !important; background: white !important; } 
-            .excel-table input, .excel-table select { border: none !important; padding: 0 !important; background: transparent !important; width: auto !important; }
-
-            #tab-dashboard.active .chart-container { page-break-inside: avoid; }
-            
-            .paid-seal.is-visible { display: block !important; }
+            #tab-due.active .print-only-header { 
+                display: flex !important; 
+                justify-content: space-between; 
+                align-items: center; 
+                border-bottom: 2px solid #333; 
+                margin-bottom: 20px; 
+                padding-bottom: 10px;
+            }
         }
     </style>
 </head>
 <body class="text-gray-800">
 
-    <!-- PASSWORD SCREEN -->
+    <!-- CLOUD SYNC INDICATOR -->
+    <div id="cloud-sync-indicator" class="fixed bottom-4 right-4 z-[100] flex items-center gap-2 bg-gray-900 text-white px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg opacity-0 transition-opacity duration-500">
+        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <span>CLOUD SYNCED</span>
+    </div>
+
+    <!-- LOGIN SCREEN -->
     <div id="login-screen" class="fixed inset-0 bg-gray-100 z-[9999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center border border-gray-200">
-            <div class="mb-6 flex justify-center">
-                <img id="login-logo-img" src="LOGO.png" alt="Holiday Travels" class="h-24 w-auto object-contain">
-            </div>
+            <div class="mb-6 flex justify-center"><img src="LOGO.png" alt="Holiday Travels" class="h-24 w-auto object-contain"></div>
             <h2 class="text-2xl font-bold mb-2 text-gray-800">Login Required</h2>
-            <p class="text-gray-500 mb-6 text-sm">Enter passcode to access.</p>
+            <p class="text-gray-500 mb-6 text-sm">Access the cloud management system.</p>
             <input type="password" id="password-input" placeholder="Passcode" class="w-full p-3 border border-gray-200 rounded-lg mb-4 text-center text-lg focus:ring-2 focus:ring-blue-500 outline-none">
-            <button onclick="attemptLogin()" class="w-full bg-gray-900 text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-lg">Login</button>
+            <button onclick="attemptLogin()" class="w-full bg-gray-900 text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-lg">Login & Sync</button>
             <p id="login-error" class="text-red-500 text-sm mt-4 hidden font-medium">Incorrect Code</p>
         </div>
     </div>
 
-    <!-- MAIN APP CONTAINER -->
-    <div class="max-w-[290mm] mx-auto mt-6 px-4 mb-4"> 
+    <div class="max-w-[1300px] mx-auto mt-6 px-4 mb-4"> 
         
         <!-- GLOBAL HEADER -->
         <div id="global-header" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
                 <img id="header-logo-img" src="LOGO.png" alt="Holiday Travels" class="h-12 w-auto object-contain">
-                <div id="cloud-status" class="text-xs font-bold px-2 py-1 rounded bg-gray-100">Checking...</div>
+                <div class="h-8 w-px bg-gray-200 hidden md:block"></div>
+                <div>
+                    <h1 class="text-sm font-bold uppercase tracking-tighter">Holiday Travels Cloud</h1>
+                    <p id="cloud-status" class="text-[10px] text-gray-400 font-bold uppercase">CONNECTING...</p>
+                </div>
             </div>
-            <div class="flex gap-2 w-full md:w-auto items-center">
-                <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100 transition-colors mr-2" title="Toggle Dark Mode">
-                    <i data-lucide="moon" class="w-5 h-5 text-gray-600 dark:hidden"></i>
-                    <i data-lucide="sun" class="w-5 h-5 text-yellow-400 hidden dark:block"></i>
-                </button>
-                
-                <button onclick="uploadLocalToCloud()" class="bg-purple-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-purple-700 flex items-center gap-2 shadow-sm">
-                    <i data-lucide="cloud-upload" class="w-4 h-4"></i> Upload Local Data to Cloud
-                </button>
-                <button onclick="backupData()" class="flex-1 md:flex-none bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-700 flex items-center justify-center gap-2 transition-all shadow-sm">
-                    <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup
-                </button>
-                <label class="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm">
-                    <i data-lucide="upload-cloud" class="w-4 h-4"></i> Restore
-                    <input type="file" class="hidden" onchange="restoreData(this)" accept=".json">
-                </label>
+            <div class="flex gap-2 items-center">
+                <button onclick="toggleDarkMode()" class="p-2 rounded-full hover:bg-gray-100"><i data-lucide="moon" class="w-5 h-5 text-gray-600 dark:hidden"></i><i data-lucide="sun" class="w-5 h-5 text-yellow-400 hidden dark:block"></i></button>
+                <button onclick="exportFullBackup()" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2"><i data-lucide="download" class="w-4 h-4"></i> Backup</button>
+                <label class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 flex items-center gap-2 cursor-pointer"><i data-lucide="upload" class="w-4 h-4"></i> Restore<input type="file" class="hidden" onchange="restoreBackup(this)" accept=".json"></label>
             </div>
         </div>
 
         <!-- NAVIGATION TABS -->
-        <div class="tabs-nav flex gap-2 mb-6 bg-white p-2 rounded-xl shadow-sm border border-gray-200 no-print max-w-[210mm] mx-auto overflow-x-auto">
-            <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md">
-                <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Dashboard
-            </button>
-            <button onclick="switchTab('hisab')" id="btn-tab-hisab" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
-                <i data-lucide="plane" class="w-4 h-4"></i> Ticketing
-            </button>
-             <button onclick="switchTab('notes')" id="btn-tab-notes" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
-                <i data-lucide="clipboard-list" class="w-4 h-4"></i> Notes & Check-in
-            </button>
-            <button onclick="switchTab('due')" id="btn-tab-due" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
-                <i data-lucide="wallet" class="w-4 h-4"></i> Due & Bank
-            </button>
-            <button onclick="switchTab('expense')" id="btn-tab-expense" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
-                <i data-lucide="calculator" class="w-4 h-4"></i> Expenses
-            </button>
-            <button onclick="switchTab('invoice')" id="btn-tab-invoice" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
-                <i data-lucide="file-text" class="w-4 h-4"></i> Invoice
-            </button>
+        <div class="tabs-nav flex gap-2 mb-6 bg-white p-2 rounded-xl shadow-sm border border-gray-200 no-print overflow-x-auto">
+            <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="tab-btn flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md"><i data-lucide="bar-chart-3" class="w-4 h-4"></i> Dashboard</button>
+            <button onclick="switchTab('hisab')" id="btn-tab-hisab" class="tab-btn flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50"><i data-lucide="plane" class="w-4 h-4"></i> Ticketing</button>
+            <button onclick="switchTab('due')" id="btn-tab-due" class="tab-btn flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50"><i data-lucide="wallet" class="w-4 h-4"></i> Due & Bank</button>
+            <button onclick="switchTab('notes')" id="btn-tab-notes" class="tab-btn flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50"><i data-lucide="clipboard-list" class="w-4 h-4"></i> Notes & Check-in</button>
+            <button onclick="switchTab('expense')" id="btn-tab-expense" class="tab-btn flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50"><i data-lucide="calculator" class="w-4 h-4"></i> Expenses</button>
+            <button onclick="switchTab('invoice')" id="btn-tab-invoice" class="tab-btn flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50"><i data-lucide="file-text" class="w-4 h-4"></i> Invoice</button>
         </div>
 
-        <!-- TAB 1: DASHBOARD -->
+        <!-- TAB: DASHBOARD -->
         <div id="tab-dashboard" class="tab-content active">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
-                <div class="p-6 bg-gray-50 border-b border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="bar-chart-3" class="text-blue-600"></i> Sales Dashboard</h2>
-                    <p class="text-sm text-gray-500">Yearly Performance Overview</p>
-                </div>
-
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div id="dashboard-alerts" class="p-6 pb-0 hidden"></div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white">
-                    <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl border border-green-200 shadow-sm">
-                        <div class="text-green-600 font-bold uppercase text-xs tracking-wider mb-1">Total Sell (Year)</div>
-                        <div class="text-3xl font-black text-gray-800" id="dash-total-sell">0.000</div>
-                        <div class="text-xs text-green-700 mt-1">OMR</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
+                    <div class="bg-green-50 p-6 rounded-2xl border border-green-100 text-center">
+                        <p class="text-xs font-bold text-green-600 uppercase tracking-widest">Yearly Sales</p>
+                        <p id="dash-total-sell" class="text-3xl font-black text-gray-800">0.000</p>
                     </div>
-                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200 shadow-sm">
-                        <div class="text-blue-600 font-bold uppercase text-xs tracking-wider mb-1">Total Profit (Year)</div>
-                        <div class="text-3xl font-black text-gray-800" id="dash-total-profit">0.000</div>
-                        <div class="text-xs text-blue-700 mt-1">OMR</div>
+                    <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 text-center">
+                        <p class="text-xs font-bold text-blue-600 uppercase tracking-widest">Yearly Profit</p>
+                        <p id="dash-total-profit" class="text-3xl font-black text-gray-800">0.000</p>
                     </div>
-                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-2xl border border-orange-200 shadow-sm">
-                        <div class="text-orange-600 font-bold uppercase text-xs tracking-wider mb-1">Total Due</div>
-                        <div class="text-3xl font-black text-gray-800" id="dash-total-due">0.000</div>
-                        <div class="text-xs text-orange-700 mt-1">OMR</div>
+                    <div class="bg-orange-50 p-6 rounded-2xl border border-orange-100 text-center">
+                        <p class="text-xs font-bold text-orange-600 uppercase tracking-widest">Outstanding Due</p>
+                        <p id="dash-total-due" class="text-3xl font-black text-gray-800">0.000</p>
                     </div>
                 </div>
-
-                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="chart-container bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                        <h3 class="text-lg font-bold text-gray-700 mb-4">Monthly Sales vs Net Cost</h3>
-                        <canvas id="salesChart" width="400" height="250"></canvas>
-                    </div>
-                    <div class="chart-container bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                        <h3 class="text-lg font-bold text-gray-700 mb-4">Monthly Profit Trend</h3>
-                        <canvas id="profitChart" width="400" height="250"></canvas>
-                    </div>
-                </div>
-
-                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-200">
-                    <div class="chart-container bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                        <h3 class="text-lg font-bold text-gray-700 mb-4">Expenses Breakdown (Year)</h3>
-                        <div class="h-64 flex justify-center">
-                            <canvas id="expenseChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="chart-container bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                        <h3 class="text-lg font-bold text-gray-700 mb-4">Outstanding Balances</h3>
-                        <canvas id="dueChart" width="400" height="250"></canvas>
-                    </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-100">
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm"><h3 class="text-lg font-bold mb-4 text-gray-700">Monthly Sales vs Cost</h3><canvas id="salesChart" height="250"></canvas></div>
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm"><h3 class="text-lg font-bold mb-4 text-gray-700">Monthly Profit Trend</h3><canvas id="profitChart" height="250"></canvas></div>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 2: TRAVEL LEDGER (HISAB) -->
+        <!-- TAB: TICKETING LEDGER -->
         <div id="tab-hisab" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="p-4 border-b border-gray-100 bg-gray-50 no-print">
-                    <div class="flex flex-wrap justify-between items-center gap-4">
-                        <div class="flex items-center gap-2">
-                            <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="plane" class="text-blue-600 w-5 h-5"></i> Ticketing Ledger</h2>
-                            <div class="h-6 w-px bg-gray-300 mx-2"></div>
-                            <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Month:</span>
-                            <input type="month" id="hisab-month-filter" class="p-1 border border-gray-300 rounded text-sm font-bold text-gray-800" onchange="loadHisab()">
-                        </div>
-                        <div class="flex gap-2">
-                             <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-2 rounded text-xs font-bold hover:bg-gray-700 flex items-center gap-1"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
-                             <button onclick="exportHisab('month')" class="bg-green-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-1"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Export Excel</button>
-                        </div>
+                <div class="p-4 bg-gray-50 border-b flex justify-between items-center no-print">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="plane" class="text-blue-600"></i> Ticketing Ledger</h2>
+                        <input type="month" id="hisab-month-filter" class="p-1 border rounded text-sm font-bold" onchange="renderHisab()">
                     </div>
+                    <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-gray-700 flex items-center gap-1"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
                 </div>
-
-                <div class="px-6 py-4 bg-white border-b border-gray-200 no-print">
-                    <form onsubmit="event.preventDefault(); addHisabEntry();" class="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-2 items-end">
-                        <input type="hidden" id="h-edit-id"> 
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">DATE</label><input type="date" id="h-date" class="w-full p-1.5 border border-gray-300 rounded text-xs bg-yellow-50" title="Leave empty for Today's Date"></div>
-                        <div class="col-span-1 md:col-span-2"><label class="block text-[10px] font-bold text-gray-500 mb-1">NAME</label><input type="text" id="h-name" placeholder="Passenger Name" class="w-full p-1.5 border border-gray-300 rounded text-xs" required></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">PNR</label><input type="text" id="h-pnr" placeholder="PNR" class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">FLIGHT DATE</label><input type="date" id="h-fdate" class="w-full p-1.5 border border-gray-300 rounded text-xs" title="Leave empty to use Entry Date"></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">SECTOR</label><input type="text" id="h-sector" placeholder="DXB-MCT" class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">PHONE</label><input type="text" id="h-phone" placeholder="968..." class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-red-600 mb-1">NET (COST)</label><input type="number" step="0.001" id="h-net" placeholder="0.000" class="w-full p-1.5 border border-red-200 rounded text-xs focus:border-red-500" required></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-green-600 mb-1">SELL (SALE)</label><input type="number" step="0.001" id="h-sell" placeholder="0.000" class="w-full p-1.5 border border-green-200 rounded text-xs focus:border-green-500" required></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-orange-500 mb-1">DUE</label><input type="number" step="0.001" id="h-due" placeholder="0.000" class="w-full p-1.5 border border-orange-200 rounded text-xs"></div>
-                        <div class="col-span-1 md:col-span-1 flex gap-1">
-                            <button type="submit" id="btn-add-update" class="flex-grow bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700 text-xs h-[30px] mt-4 shadow-sm transition-colors">ADD</button>
-                            <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="hidden bg-gray-200 text-gray-600 p-1.5 rounded font-bold hover:bg-gray-300 text-xs h-[30px] mt-4 w-8 flex items-center justify-center"><i data-lucide="x" class="w-3 h-3"></i></button>
+                <div class="p-6 border-b no-print">
+                    <form onsubmit="handleHisabSubmit(event)" id="hisab-form" class="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-2 items-end">
+                        <input type="hidden" id="h-id">
+                        <div class="col-span-1"><label class="text-[10px] font-bold text-gray-400 uppercase">Date</label><input type="date" id="h-date" class="w-full p-1.5 border rounded text-xs"></div>
+                        <div class="col-span-2"><label class="text-[10px] font-bold text-gray-400 uppercase">Passenger Name</label><input type="text" id="h-name" class="w-full p-1.5 border rounded text-xs" placeholder="Passenger Name" required></div>
+                        <div class="col-span-1"><label class="text-[10px] font-bold text-gray-400 uppercase">PNR</label><input type="text" id="h-pnr" class="w-full p-1.5 border rounded text-xs font-mono uppercase"></div>
+                        <div class="col-span-1"><label class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Flight Date</label><input type="date" id="h-fdate" class="w-full p-1.5 border rounded text-xs"></div>
+                        <div class="col-span-1"><label class="text-[10px] font-bold text-gray-400 uppercase">Sector</label><input type="text" id="h-sector" class="w-full p-1.5 border rounded text-xs" placeholder="DXB-MCT"></div>
+                        <div class="col-span-1"><label class="text-[10px] font-bold text-red-600 uppercase">Cost</label><input type="number" step="0.001" id="h-net" class="w-full p-1.5 border border-red-100 rounded text-xs" required></div>
+                        <div class="col-span-1"><label class="text-[10px] font-bold text-green-600 uppercase">Sale</label><input type="number" step="0.001" id="h-sell" class="w-full p-1.5 border border-green-100 rounded text-xs" required></div>
+                        <div class="col-span-1"><label class="text-[10px] font-bold text-orange-500 uppercase">Due</label><input type="number" step="0.001" id="h-due" class="w-full p-1.5 border border-orange-100 rounded text-xs"></div>
+                        <div class="col-span-1 flex gap-1">
+                            <button id="hisab-submit-btn" class="flex-grow bg-blue-600 text-white py-2 rounded text-xs font-bold mt-4">ADD</button>
+                            <button type="button" onclick="resetHisabForm()" class="bg-gray-100 text-gray-400 px-2 rounded mt-4">X</button>
                         </div>
                     </form>
                 </div>
-
-                <div class="p-6 bg-white min-h-[500px]">
-                    <div class="text-center mb-4">
-                        <h1 class="text-xl font-bold text-gray-800 uppercase tracking-widest">Travel Agency Ledger</h1>
-                        <p class="text-sm text-gray-500" id="sheet-header-date">January 2026</p>
-                    </div>
+                <div class="p-6 overflow-x-auto">
                     <div class="grid grid-cols-4 gap-0 mb-4 border border-gray-300 text-center text-xs font-bold bg-gray-50">
-                        <div class="p-2 border-r border-gray-300 text-red-700">Total Net (Cost): <span id="tot-net">0.000</span></div>
+                        <div class="p-2 border-r border-gray-300 text-red-700">Total Net: <span id="tot-net">0.000</span></div>
                         <div class="p-2 border-r border-gray-300 text-green-700">Total Sell: <span id="tot-sell">0.000</span></div>
                         <div class="p-2 border-r border-gray-300 text-blue-800">Total Profit: <span id="tot-profit">0.000</span></div>
                         <div class="p-2 text-orange-600">Total Due: <span id="tot-due">0.000</span></div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="excel-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 8%">DATE</th><th style="width: 15%">NAME</th><th style="width: 8%">PNR</th><th style="width: 8%">FLIGHT DATE</th><th style="width: 8%">NET</th><th style="width: 8%">SELL</th><th style="width: 8%; background-color: #e0f2fe;">PROFIT</th><th style="width: 10%">SECTOR</th><th style="width: 10%">PHONE</th><th style="width: 8%; background-color: #fff7ed;">DUE</th><th class="no-print" style="width: 4%"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="hisab-table-body" class="text-gray-700 font-mono"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 3: NOTES & CHECK-IN -->
-        <div id="tab-notes" class="tab-content">
-             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[290mm] mx-auto">
-                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-fit">
-                    <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center"><h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="clipboard-list" class="text-indigo-600"></i> Tasks & Notes</h2></div>
-                    <div class="p-4"><form onsubmit="event.preventDefault(); addNote();" class="flex gap-2 mb-4"><input type="text" id="note-input" placeholder="Add a new task..." class="flex-grow p-2 border border-gray-300 rounded text-sm" required><button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-indigo-700">Add</button></form><ul id="notes-list" class="space-y-2 max-h-[400px] overflow-y-auto"></ul></div>
-                 </div>
-                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center"><h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="plane" class="text-green-600"></i> SalamAir Check-in Tracker</h2><button onclick="toggleSalamHistory()" class="text-xs font-bold text-gray-500 hover:text-gray-700 underline">Show History</button></div>
-                    <div class="p-4 border-b border-gray-100"><form onsubmit="event.preventDefault(); addSalamReminder();" class="flex flex-wrap gap-2 items-end"><div class="flex-grow"><label class="block text-[10px] font-bold text-gray-500 mb-1">PNR</label><input type="text" id="salam-pnr" class="w-full p-2 border border-gray-300 rounded text-sm font-mono" placeholder="ABC123" required></div><div class="flex-grow"><label class="block text-[10px] font-bold text-gray-500 mb-1">Last Name</label><input type="text" id="salam-name" class="w-full p-2 border border-gray-300 rounded text-sm" placeholder="Surname" required></div><div><label class="block text-[10px] font-bold text-gray-500 mb-1">Flight Date</label><input type="date" id="salam-date" class="w-full p-2 border border-gray-300 rounded text-sm" required></div><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 h-[38px]">Track</button></form></div>
-                    <div class="p-0"><table class="excel-table w-full"><thead><tr class="bg-gray-50"><th style="width: 25%">Flight Date</th><th style="width: 20%">PNR</th><th style="width: 35%">Last Name</th><th style="width: 20%">Action</th></tr></thead><tbody id="salam-active-list"></tbody></table><div id="salam-empty" class="text-center py-8 text-gray-400 text-xs italic">No pending check-ins.</div></div>
-                    <div id="salam-history-container" class="hidden border-t border-gray-200 mt-4"><div class="p-2 bg-gray-100 text-xs font-bold text-gray-600 text-center uppercase tracking-wide">Check-in History</div><table class="excel-table w-full opacity-60"><tbody id="salam-history-list"></tbody></table></div>
-                 </div>
-             </div>
-        </div>
-
-        <!-- TAB 4: DUE & BANKING TRACKER -->
-        <div id="tab-due" class="tab-content">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
-                <div class="print-header hidden"><img src="LOGO.png" alt="Logo" class="h-24 w-auto object-contain"><div class="company-details text-right"><h1 class="font-bold text-gray-800 text-lg uppercase leading-tight mb-1">HOLIDAY TRAVELS</h1><p class="text-xs text-gray-600">NEAR PAK MOSJID SALALAH</p><p class="text-xs text-gray-600">Salalah, Sultanate of Oman</p><p class="text-xs text-gray-600 mt-1"><strong>Phone:</strong> 78594007</p></div></div>
-                <div class="p-6 bg-gray-50 border-b border-gray-200 flex flex-col gap-4 no-print">
-                    <div class="flex justify-between items-center"><h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="wallet" class="text-blue-600"></i> Due & Banking</h2><div class="flex gap-2"><button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button><button id="btn-undo-due" onclick="undoDeleteDue()" class="hidden bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Undo</button></div></div>
-                    <div class="flex justify-center"><div class="bg-gray-200 p-1 rounded-lg flex gap-1"><button onclick="setDueView('active')" id="btn-due-active" class="px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all">Active / Pending</button><button onclick="setDueView('history')" id="btn-due-history" class="px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all">History / Paid</button></div></div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 bg-white"><div class="bg-blue-50 p-4 rounded-xl border border-blue-100"><p class="text-xs font-bold text-blue-600 uppercase">Customer Due (Receivable)</p><p class="text-2xl font-black text-gray-800" id="due-total-receive">0.000</p></div><div class="bg-red-50 p-4 rounded-xl border border-red-100"><p class="text-xs font-bold text-red-600 uppercase">My Payables (Liability)</p><p class="text-2xl font-black text-gray-800" id="due-total-pay">0.000</p></div><div class="bg-green-50 p-4 rounded-xl border border-green-100"><p class="text-xs font-bold text-green-600 uppercase">Total Bank Deposit</p><p class="text-2xl font-black text-gray-800" id="due-total-bank">0.000</p></div><div class="bg-purple-50 p-4 rounded-xl border border-purple-100"><p class="text-xs font-bold text-purple-600 uppercase">Projected Net Balance</p><p class="text-2xl font-black text-gray-800" id="due-total-balance">0.000</p><p class="text-[9px] text-purple-400 mt-1 uppercase tracking-wide">Due + Bank - Payables</p></div></div>
-                <div id="due-active-view" class="grid grid-cols-1 gap-6 p-6">
-                    <div><h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="arrow-down-left" class="text-blue-500 w-4 h-4"></i> Customer Dues (Receivables)</h3><table class="excel-table w-full"><thead><tr><th style="width: 25%">Customer Name</th><th style="width: 15%">Phone (Opt)</th><th style="width: 20%">Amount</th><th style="width: 20%">Promise Date (Opt)</th><th style="width: 15%">Status</th><th class="no-print" style="width: 5%"></th></tr></thead><tbody id="due-table-customer"></tbody></table><button onclick="addDueRow('customer')" class="add-row-btn w-full mt-2 bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded hover:bg-blue-200 dashed-border border-blue-300 border-2 border-dashed">+ Add Customer Due</button></div>
-                    <div><h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="arrow-up-right" class="text-red-500 w-4 h-4"></i> My Payables (Pending)</h3><table class="excel-table w-full"><thead><tr><th style="width: 30%">Pay To (Name)</th><th style="width: 20%">Amount</th><th style="width: 20%">Pay Date</th><th style="width: 20%">Status</th><th class="no-print" style="width: 10%"></th></tr></thead><tbody id="due-table-payable"></tbody></table><button onclick="addDueRow('payable')" class="add-row-btn w-full mt-2 bg-red-100 text-red-700 text-xs font-bold py-2 rounded hover:bg-red-200 dashed-border border-red-300 border-2 border-dashed">+ Add Payable</button></div>
-                    <div><h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="landmark" class="text-green-600 w-4 h-4"></i> Recent Bank Deposits</h3><table class="excel-table w-full"><thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Name / Details</th><th style="width: 30%">Amount</th><th class="no-print" style="width: 10%"></th></tr></thead><tbody id="due-table-bank"></tbody></table><button onclick="addDueRow('bank')" class="add-row-btn w-full mt-2 bg-green-100 text-green-700 text-xs font-bold py-2 rounded hover:bg-green-200 dashed-border border-green-300 border-2 border-dashed">+ Add Bank Deposit</button></div>
-                </div>
-                <div id="due-history-view" class="hidden p-6">
-                    <div class="mb-8"><h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="history" class="text-gray-500 w-4 h-4"></i> Completed / Paid Dues History</h3><table class="excel-table w-full"><thead><tr><th style="width: 10%">Type</th><th style="width: 25%">Name / Details</th><th style="width: 15%">Amount</th><th style="width: 15%">Promise Date</th><th style="width: 15%">Paid Date</th><th style="width: 10%">Status</th><th class="no-print" style="width: 10%"></th></tr></thead><tbody id="due-table-history"></tbody></table><p class="text-xs text-gray-400 mt-2 text-center">Showing Paid Dues & Payables</p></div>
-                    <div><h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="landmark" class="text-green-600 w-4 h-4"></i> All Bank Deposits History</h3><table class="excel-table w-full"><thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Name / Details</th><th style="width: 30%">Amount</th><th class="no-print" style="width: 10%"></th></tr></thead><tbody id="due-table-bank-history"></tbody></table></div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- TAB 5: EXPENSE CALCULATOR (NEW) -->
-        <div id="tab-expense" class="tab-content">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
-                <div class="p-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center no-print">
-                    <div class="flex items-center gap-2"><h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="calculator" class="text-purple-600"></i> Expense Calculator</h2><div class="h-6 w-px bg-gray-300 mx-2"></div><input type="month" id="expense-month-filter" class="p-1 border border-gray-300 rounded text-sm font-bold text-gray-800" onchange="loadExpense()"></div>
-                    <div class="flex gap-2"><button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button><button onclick="exportExpense()" class="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-1"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Export</button></div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white"><div class="bg-blue-50 p-4 rounded-xl border border-blue-100"><p class="text-xs font-bold text-blue-600 uppercase">Office Expenses</p><p class="text-2xl font-black text-gray-800" id="exp-total-office">0.000</p></div><div class="bg-purple-50 p-4 rounded-xl border border-purple-100"><p class="text-xs font-bold text-purple-600 uppercase">Personal Expenses</p><p class="text-2xl font-black text-gray-800" id="exp-total-personal">0.000</p></div><div class="bg-red-50 p-4 rounded-xl border border-red-100"><p class="text-xs font-bold text-red-600 uppercase">Total Expenses</p><p class="text-2xl font-black text-gray-800" id="exp-total-grand">0.000</p></div></div>
-                <div class="px-6 py-4 bg-white border-b border-gray-200 no-print">
-                    <form onsubmit="event.preventDefault(); addExpenseEntry();" class="flex flex-wrap gap-2 items-end">
-                         <div class="w-36"><label class="block text-xs font-bold text-gray-500 mb-1">Date</label><input type="date" id="exp-date" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required></div>
-                        <div class="flex-grow min-w-[200px]"><label class="block text-xs font-bold text-gray-500 mb-1">Description</label><input type="text" id="exp-desc" placeholder="Expense Details..." class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required></div>
-                        <div class="w-32"><label class="block text-xs font-bold text-gray-500 mb-1">Type</label><select id="exp-type" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50"><option value="Office">Office</option><option value="Personal">Personal</option></select></div>
-                        <div class="w-28"><label class="block text-xs font-bold text-gray-500 mb-1">Amount</label><input type="number" step="0.001" id="exp-amount" placeholder="0.000" class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required></div>
-                        <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded font-bold hover:bg-red-700 h-[38px] text-sm shadow-sm">Add</button>
-                    </form>
-                </div>
-                <div class="p-6 bg-white min-h-[300px]"><table class="excel-table"><thead><tr><th style="width: 15%">Date</th><th style="width: 45%">Description</th><th style="width: 15%">Type</th><th style="width: 15%">Amount</th><th class="no-print" style="width: 10%"></th></tr></thead><tbody id="expense-table-body" class="text-gray-700 font-mono"></tbody></table></div>
-            </div>
-        </div>
-
-        <!-- TAB 5: INVOICE GENERATOR -->
-        <div id="tab-invoice" class="tab-content">
-            <div class="controls bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 justify-between items-center mb-6 max-w-[210mm] mx-auto">
-                <div class="flex items-center gap-2 flex-grow max-w-md"><input type="number" id="search-input" placeholder="Search Invoice No" class="flex-grow p-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:outline-none text-sm"><button onclick="searchInvoice()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">Search</button></div>
-                <div class="flex gap-2"><button onclick="generateNewInvoice()" class="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-200 font-bold border border-gray-300"><i data-lucide="plus" class="w-4 h-4"></i> New</button><button onclick="saveInvoice()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-bold shadow-sm"><i data-lucide="save" class="w-4 h-4"></i> Save</button><button onclick="window.print()" class="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 font-bold shadow-sm"><i data-lucide="printer" class="w-4 h-4"></i> Print</button></div>
-                <div class="w-full flex justify-end mt-2 items-center gap-2"><label class="flex items-center gap-2 cursor-pointer hover:text-green-600 font-bold text-sm text-gray-500"><input type="checkbox" id="paid-toggle" class="rounded text-green-600 focus:ring-green-500"><span>Mark as PAID</span></label></div>
-            </div>
-
-            <div class="invoice-paper" id="invoice-view">
-                <div id="paid-watermark" class="paid-seal"><div class="text-5xl font-black uppercase tracking-wider">PAID</div><div class="text-3xl font-bold arabic-text mt-0">مدفوع</div></div>
-                <header class="flex flex-col md:flex-row justify-between items-center pb-6 border-b relative z-10 gap-4">
-                    <div class="text-center md:text-left w-full md:w-1/3 pt-2"><h1 class="font-bold text-gray-800 text-lg uppercase leading-tight mb-1">HOLIDAY TRAVELS</h1><p class="text-xs text-gray-600">NEAR PAK MOSJID SALALAH</p><p class="text-xs text-gray-600">Salalah, Sultanate of Oman</p><p class="text-xs text-gray-600 mt-1"><strong>Phone:</strong> 78594007</p><p class="text-xs text-gray-600"><strong>Email:</strong> HOLIDAYTRAVELS.OM@GMAIL.COM</p></div>
-                    <div class="text-center w-full md:w-1/3 flex justify-center"><img id="invoice-logo-img" src="LOGO.png" onerror="this.style.display='none'" alt="Logo" class="h-28 w-auto object-contain mx-auto"></div>
-                    <div class="text-center md:text-right w-full md:w-1/3 pt-2 arabic-text"><h1 contenteditable="true" class="editable font-bold text-gray-800 text-xl leading-tight mb-1">سفريات هوليداي</h1><p contenteditable="true" class="editable text-sm text-gray-600">بالقرب من المسجد الباكستاني</p><p contenteditable="true" class="editable text-sm text-gray-600">صلالة، سلطنة عمان</p><p class="text-sm text-gray-600 mt-1"><strong class="mx-1">هاتف:</strong><span class="font-sans" contenteditable="true">78594007</span></p><p class="text-sm text-gray-600"><strong class="mx-1">بريد إلكتروني:</strong><span class="font-sans text-xs" contenteditable="true">HOLIDAYTRAVELS.OM@GMAIL.COM</span></p></div>
-                </header>
-
-                <div class="flex justify-between items-center mt-6 mb-6">
-                    <div class="text-left"><div class="flex flex-col"><span class="text-gray-500 text-xs font-bold uppercase">Invoice No</span><span id="invoice-number" contenteditable="true" class="editable text-xl font-bold text-gray-800 font-mono outline-none" title="Click to edit">9877</span></div></div>
-                    <div class="text-center"><h2 class="text-3xl font-bold uppercase text-gray-800 tracking-wide">INVOICE <span class="arabic-text font-normal text-2xl">فاتورة</span></h2></div>
-                    <div class="text-right"><div class="flex flex-col"><span class="text-gray-500 text-xs font-bold uppercase">Date</span><span id="invoice-date" contenteditable="true" class="editable text-xl font-bold text-gray-800"></span></div></div>
-                </div>
-
-                <section class="mb-8 bg-gray-50 rounded-lg p-4 border border-gray-100">
-                    <div class="flex justify-between items-end mb-2"><h3 class="text-xs font-bold uppercase text-gray-500 tracking-wider">Billed To</h3><h3 class="text-sm font-bold text-gray-500 arabic-text">فاتورة إلى</h3></div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block text-xs text-gray-400">Customer Name</label><div contenteditable="true" id="customer-name" class="editable text-lg font-bold text-gray-800 w-full p-1" data-placeholder="Name">Customer Name</div></div>
-                        <div class="md:text-right"><label class="block text-xs text-gray-400">Phone</label><div contenteditable="true" id="customer-phone" class="editable text-gray-600 w-full p-1 font-sans" data-placeholder="Phone">Phone Number</div></div>
-                    </div>
-                </section>
-
-                <section class="flex-grow">
-                    <table class="w-full text-left">
-                        <thead><tr class="bg-gray-800 text-white"><th class="p-3 text-sm font-semibold uppercase tracking-wider w-3/4 rounded-tl-lg rounded-bl-lg"><div class="flex justify-between"><span>Item Description</span><span class="arabic-text font-normal">تفاصيل</span></div></th><th class="p-3 text-right text-sm font-semibold uppercase tracking-wider w-1/4 rounded-tr-lg rounded-br-lg"><div class="flex flex-col items-end"><span>Amount (OMR)</span><span class="arabic-text text-xs text-gray-300">المبلغ</span></div></th><th class="w-10 no-print bg-white"></th></tr></thead>
-                        <tbody id="items-table-body"></tbody>
+                    <table class="excel-table">
+                        <thead><tr><th>DATE</th><th>PASSENGER</th><th>PNR</th><th>FLIGHT</th><th>NET</th><th>SELL</th><th>PROFIT</th><th>SECTOR</th><th>DUE</th><th class="no-print"></th></tr></thead>
+                        <tbody id="hisab-table-body"></tbody>
                     </table>
-                    <button id="add-item-btn" onclick="addRow()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Add Item</button>
-                </section>
+                </div>
+            </div>
+        </div>
 
-                <section class="mt-8 flex justify-end">
+        <!-- TAB: DUE & BANK TRACKER -->
+        <div id="tab-due" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="print-only-header hidden">
+                    <img src="LOGO.png" class="h-20 object-contain">
+                    <div class="text-right">
+                        <h1 class="font-bold text-xl">HOLIDAY TRAVELS</h1>
+                        <p class="text-xs">NEAR PAK MOSJID SALALAH</p>
+                        <p class="text-xs">Salalah, Sultanate of Oman</p>
+                        <p class="text-xs font-bold">Phone: 78594007</p>
+                    </div>
+                </div>
+
+                <div class="p-6 bg-gray-50 border-b flex flex-col gap-4 no-print">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="wallet" class="text-blue-600"></i> Due & Banking Cloud</h2>
+                        <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print Statement</button>
+                    </div>
+                    <div class="flex justify-center">
+                        <div class="bg-gray-200 p-1 rounded-lg flex gap-1">
+                            <button onclick="setDueView('active')" id="btn-due-active" class="px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all">Active / Pending</button>
+                            <button onclick="setDueView('history')" id="btn-due-history" class="px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all">History / Paid</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 bg-white border-b">
+                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 text-center"><p class="text-[10px] font-bold text-blue-400 uppercase">Receivable</p><p id="due-sum-receive" class="text-2xl font-black">0.000</p></div>
+                    <div class="bg-red-50 p-4 rounded-xl border border-red-100 text-center"><p class="text-[10px] font-bold text-red-400 uppercase">Payable</p><p id="due-sum-pay" class="text-2xl font-black">0.000</p></div>
+                    <div class="bg-green-50 p-4 rounded-xl border border-green-100 text-center"><p class="text-[10px] font-bold text-green-400 uppercase">Bank Balance</p><p id="due-sum-bank" class="text-2xl font-black">0.000</p></div>
+                    <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 text-center"><p class="text-[10px] font-bold text-purple-400 uppercase">Projected Net</p><p id="due-sum-net" class="text-2xl font-black">0.000</p></div>
+                </div>
+                <div id="due-active-view" class="p-6 space-y-8">
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b flex items-center gap-2"><i data-lucide="arrow-down-left" class="text-blue-500 w-4 h-4"></i> Customer Dues (Receivables)</h3>
+                        <table class="excel-table w-full"><thead><tr><th style="width: 25%">Name</th><th style="width: 15%">Phone</th><th style="width: 20%">Amount</th><th style="width: 20%">Date</th><th style="width: 15%">Status</th><th class="no-print"></th></tr></thead><tbody id="due-table-customer"></tbody></table>
+                        <button onclick="addDueCloudRow('customer')" class="w-full mt-2 bg-blue-100 text-blue-700 text-xs font-bold py-2 rounded-lg border-2 border-dashed border-blue-300 no-print">+ Add Customer Due</button>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b flex items-center gap-2"><i data-lucide="arrow-up-right" class="text-red-500 w-4 h-4"></i> My Payables (Liabilities)</h3>
+                        <table class="excel-table w-full"><thead><tr><th style="width: 30%">Pay To</th><th style="width: 20%">Amount</th><th style="width: 20%">Pay Date</th><th style="width: 20%">Status</th><th class="no-print"></th></tr></thead><tbody id="due-table-payable"></tbody></table>
+                        <button onclick="addDueCloudRow('payable')" class="w-full mt-2 bg-red-100 text-red-700 text-xs font-bold py-2 rounded-lg border-2 border-dashed border-red-300 no-print">+ Add Payable</button>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-700 mb-2 border-b flex items-center gap-2"><i data-lucide="landmark" class="text-green-600 w-4 h-4"></i> Bank Deposits</h3>
+                        <table class="excel-table w-full"><thead><tr><th style="width: 20%">Date</th><th style="width: 40%">Bank Details</th><th style="width: 30%">Amount</th><th class="no-print"></th></tr></thead><tbody id="due-table-bank"></tbody></table>
+                        <button onclick="addDueCloudRow('bank')" class="w-full mt-2 bg-green-100 text-green-700 text-xs font-bold py-2 rounded-lg border-2 border-dashed border-green-300 no-print">+ Add Bank Deposit</button>
+                    </div>
+                </div>
+                <div id="due-history-view" class="p-6 hidden">
+                    <h3 class="font-bold text-gray-700 mb-2 flex items-center gap-2"><i data-lucide="history"></i> Paid Records History</h3>
+                    <table class="excel-table w-full"><thead><tr><th>TYPE</th><th>NAME</th><th>AMOUNT</th><th>DATE</th><th class="no-print"></th></tr></thead><tbody id="due-table-history"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: NOTES & CHECK-IN -->
+        <div id="tab-notes" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-xl border border-gray-200">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2"><i data-lucide="check-square" class="text-indigo-600"></i> Office Tasks</h2>
+                    <form onsubmit="addTask(event)" class="flex gap-2 mb-6"><input type="text" id="task-input" class="flex-grow p-3 border rounded-xl text-sm" placeholder="Add task..."><button class="bg-indigo-600 text-white px-6 rounded-xl font-bold">Add</button></form>
+                    <ul id="task-list" class="space-y-2"></ul>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-gray-200">
+                    <div class="flex justify-between items-center mb-4"><h2 class="text-lg font-bold flex items-center gap-2"><i data-lucide="plane" class="text-green-600"></i> SalamAir Tracker</h2><button onclick="document.getElementById('salam-history-card').classList.toggle('hidden')" class="text-xs text-gray-400 underline">Show History</button></div>
+                    <form onsubmit="addSalam(event)" class="space-y-2 mb-6">
+                        <div class="grid grid-cols-2 gap-2"><input type="text" id="salam-pnr" class="p-2 border rounded text-sm uppercase font-mono" placeholder="PNR" required><input type="text" id="salam-name" class="p-2 border rounded text-sm" placeholder="Last Name" required></div>
+                        <input type="date" id="salam-date" class="w-full p-2 border rounded text-sm" required>
+                        <button class="w-full bg-green-600 text-white py-2 rounded font-bold text-sm">Track Check-in</button>
+                    </form>
+                    <div id="salam-active-list" class="space-y-2"></div>
+                    <div id="salam-history-card" class="hidden mt-4 pt-4 border-t opacity-60"><h4 class="text-[10px] font-bold text-gray-400 mb-2 uppercase">Recent Check-ins</h4><div id="salam-history-list" class="space-y-2"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: EXPENSES -->
+        <div id="tab-expense" class="tab-content">
+            <div class="bg-white rounded-xl border p-6 overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="calculator" class="text-red-500"></i> Expense Hub</h2>
+                    <input type="month" id="exp-month-filter" class="p-2 border rounded font-bold" onchange="renderExpenses()">
+                </div>
+                <form onsubmit="addExpense(event)" class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-6 bg-gray-50 p-4 rounded-xl border">
+                    <input type="date" id="exp-date" class="p-2 border rounded text-sm"><input type="text" id="exp-desc" class="p-2 border rounded text-sm md:col-span-2" placeholder="Description"><input type="number" step="0.001" id="exp-amt" class="p-2 border rounded text-sm" placeholder="Amount"><button class="bg-red-600 text-white rounded font-bold">Add</button>
+                </form>
+                <div class="p-4 bg-red-50 rounded-xl mb-4 text-center border border-red-100"><p class="text-xs font-bold text-red-400 uppercase tracking-widest">Monthly Total</p><p id="exp-sum" class="text-3xl font-black">0.000</p></div>
+                <table class="excel-table"><thead><tr><th>DATE</th><th>DESCRIPTION</th><th>AMOUNT</th><th class="no-print"></th></tr></thead><tbody id="expense-table-body"></tbody></table>
+            </div>
+        </div>
+
+        <!-- TAB: INVOICE GENERATOR -->
+        <div id="tab-invoice" class="tab-content">
+            <div class="no-print bg-white p-4 rounded-xl border border-gray-200 mb-4 flex justify-between items-center flex-wrap gap-4">
+                <div class="flex gap-2"><input type="number" id="search-invoice" placeholder="Invoice #" class="p-2 border rounded text-sm"><button onclick="loadInvoice()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm">Load Cloud</button></div>
+                <div class="flex gap-3 items-center">
+                    <label class="flex items-center gap-1 text-xs font-bold cursor-pointer text-gray-500 hover:text-green-600"><input type="checkbox" id="paid-toggle" onchange="togglePaidStamp()"> Mark as PAID</label>
+                    <button onclick="resetInvoice()" class="bg-gray-100 px-4 py-2 rounded text-sm font-bold border">New</button>
+                    <button onclick="saveInvoice()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold shadow-lg">Save Cloud</button>
+                    <button onclick="window.print()" class="bg-green-600 text-white px-4 py-2 rounded font-bold">Print</button>
+                </div>
+            </div>
+            <div class="invoice-paper" id="invoice-render">
+                <div id="paid-watermark" class="paid-seal"><div class="text-5xl font-black uppercase">PAID</div><div class="text-3xl font-bold arabic-text mt-0">مدفوع</div></div>
+                <header class="flex justify-between items-center pb-8 border-b-2">
+                    <div class="w-1/3">
+                        <h1 class="font-bold text-lg text-gray-800 leading-tight">HOLIDAY TRAVELS</h1>
+                        <p class="text-xs text-gray-600 uppercase font-bold tracking-tighter">NEAR PAK MOSJID SALALAH</p>
+                        <p class="text-xs text-gray-500">Salalah, Sultanate of Oman</p>
+                        <p class="text-xs text-gray-500 mt-1 font-bold">Phone: 78594007</p>
+                        <p class="text-[10px] text-gray-400">Email: HOLIDAYTRAVELS.OM@GMAIL.COM</p>
+                    </div>
+                    <div class="w-1/3 text-center"><img src="LOGO.png" class="h-24 mx-auto object-contain"></div>
+                    <div class="w-1/3 text-right arabic-text">
+                        <h2 class="text-2xl font-bold">سفريات هوليداي</h2>
+                        <p class="text-sm">بالقرب من المسجد الباكستاني</p>
+                        <p class="text-sm">صلالة، سلطنة عمان</p>
+                        <p class="text-sm mt-1">هاتف: <span class="font-sans">78594007</span></p>
+                        <p class="text-[10px] text-gray-400 font-sans">HOLIDAYTRAVELS.OM@GMAIL.COM</p>
+                    </div>
+                </header>
+                <div class="flex justify-between items-center my-8">
+                    <div class="flex flex-col"><span class="text-[10px] text-gray-400 font-bold uppercase">Invoice No</span><span id="inv-num" contenteditable="true" class="text-2xl font-bold font-mono">0001</span></div>
+                    <div class="text-center font-black tracking-widest text-3xl opacity-20">INVOICE <span class="arabic-text font-normal text-xl">فاتورة</span></div>
+                    <div class="flex flex-col text-right"><span class="text-[10px] text-gray-400 font-bold uppercase">Date</span><span id="inv-date" contenteditable="true" class="text-sm font-bold">01/01/2026</span></div>
+                </div>
+                <div class="bg-gray-50 p-6 rounded-2xl mb-8 border">
+                    <div class="flex justify-between mb-4"><span class="text-[10px] font-bold text-gray-400 uppercase">Bill To</span><span class="text-[10px] font-bold text-gray-400 uppercase arabic-text">فاتورة إلى</span></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="text-[10px] text-gray-400 uppercase font-bold">Customer Name</label><div id="inv-client" contenteditable="true" class="text-lg font-bold border-b border-gray-200 py-1">Customer Name</div></div>
+                        <div class="text-right"><label class="text-[10px] text-gray-400 uppercase font-bold">Phone</label><div id="inv-phone" contenteditable="true" class="text-lg font-mono py-1">968...</div></div>
+                    </div>
+                </div>
+                <table class="w-full mb-10">
+                    <thead><tr class="bg-gray-800 text-white text-[10px] uppercase font-bold tracking-widest">
+                        <th class="p-4 text-left rounded-tl-lg rounded-bl-lg"><div class="flex justify-between"><span>Description</span><span class="arabic-text font-normal">تفاصيل</span></div></th>
+                        <th class="p-4 text-right rounded-tr-lg rounded-br-lg" style="width: 150px;"><div class="flex flex-col items-end"><span>Amount (OMR)</span><span class="arabic-text text-[8px]">المبلغ</span></div></th>
+                        <th class="w-8 no-print"></th>
+                    </tr></thead>
+                    <tbody id="inv-items"></tbody>
+                </table>
+                <button onclick="addInvRow()" class="no-print text-[10px] font-black text-blue-600 uppercase tracking-widest">+ Add Description</button>
+                <div class="mt-auto pt-10 border-t flex justify-end">
                     <div class="w-72">
-                        <div class="flex justify-between items-center py-2 border-b border-gray-200"><span class="text-gray-600 font-medium text-sm">Subtotal</span><span class="font-bold text-gray-800"><span id="subtotal">0.000</span></span></div>
-                        <div class="flex justify-between items-center py-3 bg-gray-100 px-4 rounded-lg mt-3 border border-gray-200"><span class="text-lg font-bold text-gray-800">Total</span><span class="text-xl font-bold text-blue-900"><span id="total">0.000</span> <span class="text-sm text-gray-500">OMR</span></span></div>
+                        <div class="flex justify-between py-2 border-b"><span class="text-gray-400 text-xs font-bold uppercase">Subtotal</span><span id="inv-subtotal" class="font-bold">0.000</span></div>
+                        <div class="flex justify-between items-center py-4 bg-gray-100 px-6 rounded-xl mt-4 border border-gray-200"><span class="text-xl font-black">TOTAL</span><span class="text-2xl font-black text-blue-800"><span id="inv-total">0.000</span> <span class="text-xs">OMR</span></span></div>
                     </div>
-                </section>
-
-                <footer class="mt-12 pt-6 border-t border-gray-200 text-gray-500 text-sm">
-                    <div class="flex flex-col md:flex-row justify-between items-end">
-                        <div class="text-left space-y-1"><p class="text-xs uppercase font-bold text-gray-800">Company Reg Details</p><p class="font-bold text-gray-700">Sajer Desert Rare Trading Company</p><p class="font-bold text-gray-700 arabic-text">شركة صحراء ساجر للتجارة النادرة</p><p><strong class="text-xs">CR No:</strong> <span class="font-mono">1588173</span></p></div>
-                        <div class="mt-4 md:mt-0 flex flex-col items-center"><img src="WHATSAPP.jpg" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1200px-WhatsApp.svg.png'" alt="WhatsApp" class="w-16 h-16 object-contain mb-1"><p class="text-xs font-bold text-green-600">Contact Support</p></div>
+                </div>
+                <footer class="mt-16 pt-8 border-t border-gray-100 flex justify-between items-end">
+                    <div class="text-[9px] text-gray-400 space-y-1">
+                        <p class="font-bold uppercase text-gray-600">Sajer Desert Rare Trading Company</p>
+                        <p class="font-bold text-gray-600 arabic-text">شركة صحراء ساجر للتجارة النادرة</p>
+                        <p>CR No: 1588173 | This copy is electronically generated</p>
                     </div>
-                    <p class="mt-8 italic text-center text-[10px] text-gray-400">This invoice is electronically generated / هذه الفاتورة صادرة إلكترونياً</p>
+                    <div class="opacity-30 grayscale"><img src="WHATSAPP.jpg" class="h-10 object-contain"></div>
                 </footer>
             </div>
         </div>
 
     </div>
 
-    <script>
-        const STORAGE_PREFIX = 'holiday_inv_';
-        const STORAGE_KEY_COUNTER = 'holidayTravelsInvoiceNum';
-        
-        lucide.createIcons();
-        window.currentTab = 'dashboard'; 
+    <!-- FIREBASE MODULE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        function toggleDarkMode() {
-            const body = document.body;
-            if (body.classList.contains('dark')) {
-                body.classList.remove('dark');
-                localStorage.setItem('holiday_theme', 'light');
-            } else {
-                body.classList.add('dark');
-                localStorage.setItem('holiday_theme', 'dark');
-            }
-        }
-        if (localStorage.getItem('holiday_theme') === 'dark') document.body.classList.add('dark');
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'holiday-travels-pro-cloud';
 
-        const CORRECT_PASS = "96419161";
-        const loginScreen = document.getElementById('login-screen');
-        const passInput = document.getElementById('password-input');
-        
-        if (sessionStorage.getItem('invoice_authorized') === 'true' && loginScreen) { loginScreen.style.display = 'none'; }
-
-        window.attemptLogin = function() {
-            if (passInput && passInput.value === CORRECT_PASS) {
-                sessionStorage.setItem('invoice_authorized', 'true');
-                if(loginScreen) loginScreen.style.display = 'none';
-            } else {
-                const err = document.getElementById('login-error');
-                if(err) err.classList.remove('hidden');
-                if(passInput) passInput.value = '';
-            }
-        }
-        if (passInput) passInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') attemptLogin(); });
-
-        window.switchTab = function(tabName) {
-            window.currentTab = tabName;
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            const activeTab = document.getElementById(`tab-${tabName}`);
-            if(activeTab) activeTab.classList.add('active');
-            
-            document.querySelectorAll('.tabs-nav button').forEach(btn => {
-                btn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50";
-            });
-            
-            const currentBtn = document.getElementById(`btn-tab-${tabName}`);
-            if(currentBtn) {
-                currentBtn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md";
-            }
-
-            if(window.refreshActiveTab) window.refreshActiveTab();
-            if(tabName === 'invoice') {
-                if(document.getElementById('items-table-body') && document.getElementById('items-table-body').children.length === 0) addRow();
-            }
-        }
-
-        function setInvoiceNumberDisplay(num) { 
-            const el = document.getElementById('invoice-number');
-            if(el) el.textContent = String(num).padStart(4, '0'); 
-        }
-
-        function setTodayDate() {
-            const today = new Date();
-            const d = String(today.getDate()).padStart(2, '0');
-            const m = String(today.getMonth() + 1).padStart(2, '0');
-            const y = today.getFullYear();
-            
-            const invDate = document.getElementById('invoice-date');
-            if(invDate) invDate.textContent = `${d}/${m}/${y}`;
-            
-            const monthStr = `${y}-${m}`;
-            const monthFilter = document.getElementById('hisab-month-filter');
-            if(monthFilter) monthFilter.value = monthStr;
-            const expMonthFilter = document.getElementById('expense-month-filter');
-            if(expMonthFilter) expMonthFilter.value = monthStr;
-        }
-
-        function resetInvoiceDate() {
-            setTodayDate();
-        }
-
-        window.calculateTotal = function() {
-            let subtotal = 0;
-            document.querySelectorAll('.item-amount').forEach(el => {
-                subtotal += parseFloat(el.innerText.replace(/[^0-9.-]+/g,"")) || 0;
-            });
-            const sub = document.getElementById('subtotal');
-            const tot = document.getElementById('total');
-            if(sub) sub.textContent = subtotal.toFixed(3);
-            if(tot) tot.textContent = subtotal.toFixed(3);
-        };
-
-        window.addRow = function(desc = "DHAKA TO SALALAH", price = "0.000") {
-            const tbody = document.getElementById('items-table-body');
-            if(!tbody) return;
-            const newRow = document.createElement('tr');
-            newRow.className = 'item-row border-b border-gray-100 hover:bg-gray-50';
-            newRow.innerHTML = `
-                <td class="p-3 align-top"><div class="flex flex-col gap-1"><span contenteditable="true" class="item-desc editable w-full block font-medium text-gray-800" data-placeholder="Description">${desc}</span></div></td>
-                <td class="p-3 align-top text-right"><span contenteditable="true" class="item-amount editable w-full block text-right font-mono text-lg text-gray-700">${price}</span></td>
-                <td class="p-3 text-center no-print align-middle"><button onclick="deleteRow(this)" class="delete-row text-red-400 hover:text-red-600 font-bold p-1 rounded hover:bg-red-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
-            `;
-            tbody.appendChild(newRow);
-            lucide.createIcons();
-            
-            const amountCell = newRow.querySelector('.item-amount');
-            const descCell = newRow.querySelector('.item-desc');
-            [amountCell, descCell].forEach(cell => cell.addEventListener('input', calculateTotal));
-            amountCell.addEventListener('blur', (e) => {
-                const val = parseFloat(e.target.innerText.replace(/[^0-9.-]+/g,"")) || 0;
-                e.target.innerText = val.toFixed(3);
-                calculateTotal();
-            });
-            descCell.addEventListener('focus', function() { if (this.innerText.includes("DHAKA TO SALALAH")) this.innerText = ""; });
-            calculateTotal();
-        };
-        
-        window.deleteRow = function(btn) { btn.closest('tr').remove(); calculateTotal(); };
-
-        window.saveInvoice = function() {
-            const numEl = document.getElementById('invoice-number');
-            if(!numEl) return;
-            const id = parseInt(numEl.textContent, 10);
-            if(id > (window.state.invoiceCounter || 0)) window.cloudUpdateCounter(id);
-            alert(`Invoice #${id} Saved!`);
-        }
-
-        window.generateNewInvoice = function() {
-            const nextNum = (window.state.invoiceCounter || 9876) + 1;
-            setInvoiceNumberDisplay(nextNum);
-            resetInvoiceDate(); 
-            document.getElementById('customer-name').innerText = "Customer Name";
-            document.getElementById('customer-phone').innerText = "Phone Number";
-            const paidEl = document.getElementById('paid-toggle');
-            if(paidEl) paidEl.checked = false;
-            if(document.getElementById('search-input')) document.getElementById('search-input').value = '';
-            const tbody = document.getElementById('items-table-body');
-            if(tbody) tbody.innerHTML = '';
-            addRow("DHAKA TO SALALAH", "0.000");
-        }
-
-        window.togglePaidStamp = function() {
-            const paidEl = document.getElementById('paid-toggle');
-            const stamp = document.getElementById('paid-watermark');
-            if (paidEl && paidEl.checked) {
-                if(stamp) {
-                    stamp.classList.add('is-visible');
-                    stamp.style.display = 'block';
-                }
-            } else {
-                if(stamp) {
-                    stamp.classList.remove('is-visible');
-                    stamp.style.display = 'none';
-                }
-            }
-        }
-        const paidToggle = document.getElementById('paid-toggle');
-        if(paidToggle) paidToggle.addEventListener('change', window.togglePaidStamp);
-
-        // --- LEDGER LOGIC ---
-        function getHisabData() { return window.state.ledger || []; }
-
-        window.addHisabEntry = function() {
-            let date = document.getElementById('h-date').value;
-            if (!date) date = new Date().toISOString().split('T')[0];
-
-            const name = document.getElementById('h-name').value;
-            const pnr = document.getElementById('h-pnr').value;
-            const fdate = document.getElementById('h-fdate').value || date;
-            const sector = document.getElementById('h-sector').value;
-            const phone = document.getElementById('h-phone').value;
-            const net = parseFloat(document.getElementById('h-net').value) || 0;
-            const sell = parseFloat(document.getElementById('h-sell').value) || 0;
-            const due = parseFloat(document.getElementById('h-due').value) || 0;
-
-            if(!name) return alert('Name is required');
-
-            const entryData = {
-                id: Date.now(),
-                date, name, pnr, flight_date: fdate,
-                sector, phone, net, sell, due
-            };
-
-            const editId = document.getElementById('h-edit-id').value;
-            
-            if (editId) {
-                entryData.id = parseInt(editId); 
-                window.cloudAdd('ledger', entryData);
-                window.cancelEdit();
-            } else {
-                window.cloudAdd('ledger', entryData);
-                ['h-name','h-pnr','h-fdate','h-sector','h-phone','h-net','h-sell','h-due'].forEach(id => document.getElementById(id).value = '');
-            }
-        }
-
-        window.editRow = function(id) {
-            const data = getHisabData().find(e => e.id === id);
-            if(!data) return;
-            document.getElementById('h-date').value = data.date;
-            document.getElementById('h-name').value = data.name;
-            document.getElementById('h-pnr').value = data.pnr || '';
-            document.getElementById('h-fdate').value = data.flight_date || '';
-            document.getElementById('h-sector').value = data.sector || '';
-            document.getElementById('h-phone').value = data.phone || '';
-            document.getElementById('h-net').value = data.net;
-            document.getElementById('h-sell').value = data.sell;
-            document.getElementById('h-due').value = data.due || 0;
-            document.getElementById('h-edit-id').value = id;
-            
-            document.getElementById('btn-add-update').textContent = "UPDATE";
-            document.getElementById('btn-cancel-edit').classList.remove('hidden');
-        }
-
-        window.cancelEdit = function() {
-            document.getElementById('h-edit-id').value = '';
-            document.getElementById('btn-add-update').textContent = "ADD";
-            document.getElementById('btn-cancel-edit').classList.add('hidden');
-            ['h-name','h-pnr','h-fdate','h-sector','h-phone','h-net','h-sell','h-due'].forEach(id => document.getElementById(id).value = '');
-        }
-
-        window.deleteHisabEntry = function(id) {
-            if(!confirm('Delete?')) return;
-            window.cloudDelete('ledger', id);
-        }
-
-        window.loadHisab = function() {
-            const filterEl = document.getElementById('hisab-month-filter');
-            if(!filterEl) return;
-            const selectedMonth = filterEl.value;
-            const data = getHisabData().filter(e => e.date && e.date.startsWith(selectedMonth));
-            data.sort((a, b) => a.date.localeCompare(b.date));
-
-            const tbody = document.getElementById('hisab-table-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            
-            let tNet=0, tSell=0, tProfit=0, tDue=0;
-
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11" class="p-8 text-center text-gray-400 italic">No transactions found.</td></tr>';
-            } else {
-                data.forEach(item => {
-                    const profit = (item.sell || 0) - (item.net || 0);
-                    tNet += item.net || 0;
-                    tSell += item.sell || 0;
-                    tProfit += profit;
-                    tDue += item.due || 0;
-
-                    const row = document.createElement('tr');
-                    row.onclick = () => editRow(item.id);
-                    row.innerHTML = `
-                        <td class="text-center">${item.date}</td>
-                        <td class="font-bold">${item.name}</td>
-                        <td class="text-center text-xs font-mono">${item.pnr || '-'}</td>
-                        <td class="text-center text-xs">${item.flight_date || '-'}</td>
-                        <td class="text-right text-red-600">${(item.net||0).toFixed(3)}</td>
-                        <td class="text-right text-green-700 font-bold">${(item.sell||0).toFixed(3)}</td>
-                        <td class="text-right text-blue-800 bg-blue-50 font-bold">${profit.toFixed(3)}</td>
-                        <td class="text-xs text-center">${item.sector || '-'}</td>
-                        <td class="text-xs text-center">${item.phone || '-'}</td>
-                        <td class="text-right text-orange-600 font-bold bg-orange-50">${(item.due||0).toFixed(3)}</td>
-                        <td class="text-center no-print"><button onclick="deleteHisabEntry(${item.id})" class="text-gray-400 hover:text-red-500"><i data-lucide="x" class="w-3 h-3"></i></button></td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            }
-            // Update Headers
-             const tNetEl = document.getElementById('tot-net'); if(tNetEl) tNetEl.textContent = tNet.toFixed(3);
-             const tSellEl = document.getElementById('tot-sell'); if(tSellEl) tSellEl.textContent = tSell.toFixed(3);
-             const tProfEl = document.getElementById('tot-profit'); if(tProfEl) tProfEl.textContent = tProfit.toFixed(3);
-             const tDueEl = document.getElementById('tot-due'); if(tDueEl) tDueEl.textContent = tDue.toFixed(3);
-             lucide.createIcons();
-        }
-
-        // --- DUE LOGIC ---
-        function getDueData() { return window.state.dues || []; }
-
-        window.addDueRow = function(type) {
-            const newItem = {
-                id: Date.now(),
-                type: type, 
-                name: '', phone: '', bankName: '', amount: '',
-                date: new Date().toISOString().split('T')[0],
-                status: 'Pending', paymentDate: ''
-            };
-            window.cloudAdd('dues', newItem);
-        }
-
-        window.updateDueItem = function(id, field, value) {
-            const data = getDueData();
-            const item = data.find(e => e.id === id);
-            if(item) {
-                item[field] = value;
-                if(field === 'status' && value === 'Paid') item.paymentDate = new Date().toISOString().split('T')[0];
-                if(field === 'status' && value === 'Pending') item.paymentDate = '';
-                window.cloudAdd('dues', item);
-            }
-        }
-
-        window.deleteDueItem = function(id) {
-            if(!confirm('Delete?')) return;
-            window.cloudDelete('dues', id);
-        }
-        
+        window.cloudState = { ledger: [], dues: [], tasks: [], salam: [], expenses: [], counter: 9876 };
+        window.currentTab = 'dashboard';
         let dueViewMode = 'active';
-        window.setDueView = function(mode) {
-             dueViewMode = mode;
-             window.loadDueData();
+
+        // AUTH
+        const authenticate = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
+
+        window.attemptLogin = async () => {
+            const pass = document.getElementById('password-input').value;
+            if (pass === "96419161") {
+                document.getElementById('login-screen').style.display = 'none';
+                await authenticate();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('cloud-status').textContent = 'CLOUD ONLINE';
+                document.getElementById('cloud-status').className = 'text-[10px] text-green-500 font-bold uppercase tracking-widest';
+                startRealtimeSync();
+            }
+        });
+
+        function startRealtimeSync() {
+            const syncEl = document.getElementById('cloud-sync-indicator');
+            const listen = (coll, key, renderer) => {
+                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', coll), (snap) => {
+                    window.cloudState[key] = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    if(renderer) renderer();
+                    if(key === 'ledger' || key === 'dues' || key === 'salam') updateDashboard();
+                    syncEl.style.opacity = '1';
+                    setTimeout(() => syncEl.style.opacity = '0', 1000);
+                }, (err) => console.error(err));
+            };
+
+            listen('ledger', 'ledger', renderHisab);
+            listen('dues', 'dues', renderDues);
+            listen('tasks', 'tasks', renderTasks);
+            listen('salam', 'salam', renderSalam);
+            listen('expenses', 'expenses', renderExpenses);
+            
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), (snap) => {
+                if(snap.exists()) {
+                    window.cloudState.counter = snap.data().invoiceNum;
+                    const el = document.getElementById('inv-num');
+                    if(el && document.activeElement !== el) el.textContent = String(snap.data().invoiceNum).padStart(4, '0');
+                }
+            });
         }
 
-        window.loadDueData = function() {
-            const data = getDueData();
-            // Stats
-            let totalReceive = 0, totalPay = 0, totalBank = 0;
-            data.forEach(item => {
-                const amt = parseFloat(item.amount) || 0;
-                if (item.type === 'customer' && item.status === 'Pending') totalReceive += amt;
-                if (item.type === 'payable' && item.status === 'Pending') totalPay += amt;
-                if (item.type === 'bank') totalBank += amt;
-            });
-            const rEl = document.getElementById('due-total-receive'); if(rEl) rEl.textContent = totalReceive.toFixed(3);
-            const pEl = document.getElementById('due-total-pay'); if(pEl) pEl.textContent = totalPay.toFixed(3);
-            const bEl = document.getElementById('due-total-bank'); if(bEl) bEl.textContent = totalBank.toFixed(3);
-            const balEl = document.getElementById('due-total-balance'); 
-            if(balEl) balEl.textContent = ((totalReceive + totalBank) - totalPay).toFixed(3);
+        // CLOUD CRUD
+        window.cloudSave = async (coll, data) => {
+            const id = data.id || Date.now().toString();
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id), data);
+        };
+        window.cloudDelete = async (coll, id) => {
+            if(confirm("Permanently delete from cloud?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', coll, id));
+        };
 
-            // Populate Tables
-            const custContainer = document.getElementById('due-table-customer');
-            const payContainer = document.getElementById('due-table-payable');
-            const bankContainer = document.getElementById('due-table-bank');
+        // RENDERERS
+        function renderHisab() {
+            const tbody = document.getElementById('hisab-table-body');
+            const month = document.getElementById('hisab-month-filter').value;
+            const data = window.cloudState.ledger.filter(l => !month || l.date.startsWith(month)).sort((a,b) => b.id - a.id);
             
-            if(custContainer) custContainer.innerHTML = '';
-            if(payContainer) payContainer.innerHTML = '';
-            if(bankContainer) bankContainer.innerHTML = '';
+            tbody.innerHTML = data.map(i => `
+                <tr onclick="editHisabRow('${i.id}')">
+                    <td class="font-mono text-[10px]">${i.date}</td>
+                    <td class="font-bold">${i.name}</td>
+                    <td class="font-mono text-[10px] uppercase">${i.pnr || '-'}</td>
+                    <td class="text-gray-400 text-[10px]">${i.fdate || '-'}</td>
+                    <td class="text-right text-red-500">${i.net.toFixed(3)}</td>
+                    <td class="text-right text-green-600 font-bold">${i.sell.toFixed(3)}</td>
+                    <td class="text-right text-blue-600 font-bold">${(i.sell - i.net).toFixed(3)}</td>
+                    <td class="text-[10px] uppercase">${i.sector || '-'}</td>
+                    <td class="text-right text-orange-600 font-black">${(i.due || 0).toFixed(3)}</td>
+                    <td class="no-print"><button onclick="event.stopPropagation(); cloudDelete('ledger', '${i.id}')" class="text-gray-300 hover:text-red-500">×</button></td>
+                </tr>
+            `).join('');
 
-            data.forEach(item => {
-                 if (dueViewMode === 'active') {
-                     if (item.type === 'customer' && item.status === 'Pending' && custContainer) {
-                         const row = document.createElement('tr');
-                         row.innerHTML = `
-                            <td><input type="text" class="w-full p-1 border rounded" value="${item.name}" placeholder="Name" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
-                            <td><input type="text" class="w-full p-1 border rounded" value="${item.phone||''}" placeholder="968..." onchange="updateDueItem(${item.id}, 'phone', this.value)"></td>
-                            <td><input type="number" step="0.001" class="w-full p-1 border rounded font-mono" value="${item.amount}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
-                            <td><input type="date" class="w-full p-1 border rounded" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
-                            <td><select class="w-full p-1 border rounded" onchange="updateDueItem(${item.id}, 'status', this.value)"><option value="Pending" selected>Pending</option><option value="Paid">Paid</option></select></td>
-                            <td><button onclick="deleteDueItem(${item.id})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>`;
-                         custContainer.appendChild(row);
-                     }
-                     else if (item.type === 'payable' && item.status === 'Pending' && payContainer) {
-                         const row = document.createElement('tr');
-                         row.innerHTML = `
-                            <td><input type="text" class="w-full p-1 border rounded" value="${item.name}" placeholder="Name" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
-                            <td><input type="number" step="0.001" class="w-full p-1 border rounded font-mono" value="${item.amount}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
-                            <td><input type="date" class="w-full p-1 border rounded" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
-                            <td><select class="w-full p-1 border rounded" onchange="updateDueItem(${item.id}, 'status', this.value)"><option value="Pending" selected>Pending</option><option value="Paid">Paid</option></select></td>
-                            <td><button onclick="deleteDueItem(${item.id})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>`;
-                         payContainer.appendChild(row);
-                     }
-                     else if (item.type === 'bank' && bankContainer) {
-                         const row = document.createElement('tr');
-                         row.innerHTML = `
-                            <td><input type="date" class="w-full p-1 border rounded" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
-                            <td><input type="text" class="w-full p-1 border rounded" value="${item.bankName}" placeholder="Details" onchange="updateDueItem(${item.id}, 'bankName', this.value)"></td>
-                            <td><input type="number" step="0.001" class="w-full p-1 border rounded font-mono" value="${item.amount}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
-                            <td><button onclick="deleteDueItem(${item.id})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>`;
-                         bankContainer.appendChild(row);
-                     }
-                 }
-            });
+            document.getElementById('tot-net').textContent = data.reduce((a,v) => a + v.net, 0).toFixed(3);
+            document.getElementById('tot-sell').textContent = data.reduce((a,v) => a + v.sell, 0).toFixed(3);
+            document.getElementById('tot-profit').textContent = data.reduce((a,v) => a + (v.sell - v.net), 0).toFixed(3);
+            document.getElementById('tot-due').textContent = data.reduce((a,v) => a + (v.due || 0), 0).toFixed(3);
             lucide.createIcons();
         }
 
-        // --- EXPENSES LOGIC ---
-        function getExpenseData() { return window.state.expenses || []; }
-
-        window.addExpenseEntry = function() {
-            const date = document.getElementById('exp-date').value;
-            const desc = document.getElementById('exp-desc').value;
-            const type = document.getElementById('exp-type').value;
-            const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
-            
-            if(!desc || amount === 0) return alert('Fill fields');
-            
-            const item = { id: Date.now(), date, desc, type, amount };
-            window.cloudAdd('expenses', item);
-            document.getElementById('exp-desc').value = '';
-            document.getElementById('exp-amount').value = '';
+        window.setDueView = (mode) => {
+            dueViewMode = mode;
+            document.getElementById('btn-due-active').className = mode === 'active' ? 'px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all' : 'px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all';
+            document.getElementById('btn-due-history').className = mode === 'history' ? 'px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all' : 'px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all';
+            document.getElementById('due-active-view').classList.toggle('hidden', mode === 'history');
+            document.getElementById('due-history-view').classList.toggle('hidden', mode === 'active');
+            renderDues();
         }
 
-        window.deleteExpenseEntry = function(id) {
-            if(!confirm('Delete?')) return;
-            window.cloudDelete('expenses', id);
-        }
+        function renderDues() {
+            const data = window.cloudState.dues.sort((a,b) => b.id - a.id);
+            const activeCust = document.getElementById('due-table-customer');
+            const activePay = document.getElementById('due-table-payable');
+            const activeBank = document.getElementById('due-table-bank');
+            const historyBody = document.getElementById('due-table-history');
 
-        window.loadExpense = function() {
-            const filterEl = document.getElementById('expense-month-filter');
-            if(!filterEl) return;
-            const selectedMonth = filterEl.value;
-            const data = getExpenseData().filter(e => e.date && e.date.startsWith(selectedMonth));
-            
-            const tbody = document.getElementById('expense-table-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            
-            let off=0, per=0;
-            data.forEach(item => {
-                if(item.type==='Office') off += item.amount; else per += item.amount;
-                const row = document.createElement('tr');
-                row.innerHTML = `<td>${item.date}</td><td>${item.desc}</td><td>${item.type}</td><td class="font-mono text-right">${item.amount.toFixed(3)}</td><td class="text-center"><button onclick="deleteExpenseEntry(${item.id})"><i data-lucide="x" class="w-4 h-4 text-gray-400"></i></button></td>`;
-                tbody.appendChild(row);
+            activeCust.innerHTML = ''; activePay.innerHTML = ''; activeBank.innerHTML = ''; historyBody.innerHTML = '';
+
+            data.forEach(d => {
+                if(d.status === 'Paid' || d.status === 'Completed') {
+                    historyBody.innerHTML += `<tr><td class="text-[10px] font-black uppercase text-gray-400">${d.type}</td><td class="font-bold">${d.name}</td><td class="font-mono">${d.amount.toFixed(3)}</td><td>${d.date}</td><td class="no-print"><button onclick="cloudDelete('dues', '${d.id}')" class="text-red-300">×</button></td></tr>`;
+                } else if(d.type === 'bank') {
+                    activeBank.innerHTML += `<tr><td>${d.date}</td><td><input type="text" class="w-full bg-transparent border-none" value="${d.name}" onblur="cloudSave('dues', {...${JSON.stringify(d)}, name: this.value})"></td><td><input type="number" step="0.001" class="w-full bg-transparent border-none text-right font-black text-green-700" value="${d.amount}" onblur="cloudSave('dues', {...${JSON.stringify(d)}, amount: parseFloat(this.value)})"></td><td class="no-print"><button onclick="cloudDelete('dues', '${d.id}')" class="text-red-300">×</button></td></tr>`;
+                } else {
+                    const rowHtml = `<tr>
+                        <td class="font-bold text-gray-700"><input type="text" class="w-full bg-transparent border-none" value="${d.name}" onblur="cloudSave('dues', {...${JSON.stringify(d)}, name: this.value})"></td>
+                        ${d.type === 'customer' ? `<td><input type="text" class="w-full bg-transparent border-none text-xs text-gray-400" value="${d.phone || ''}" onblur="cloudSave('dues', {...${JSON.stringify(d)}, phone: this.value})"></td>` : ''}
+                        <td><input type="number" step="0.001" class="w-full bg-transparent border-none text-right font-black" value="${d.amount}" onblur="cloudSave('dues', {...${JSON.stringify(d)}, amount: parseFloat(this.value)})"></td>
+                        <td><input type="date" class="w-full bg-transparent border-none text-xs" value="${d.date}" onchange="cloudSave('dues', {...${JSON.stringify(d)}, date: this.value})"></td>
+                        <td><select class="text-[10px] font-bold p-1 rounded bg-orange-100 text-orange-600" onchange="cloudSave('dues', {...${JSON.stringify(d)}, status: this.value})"><option value="Pending">Pending</option><option value="Paid">Paid</option></select></td>
+                        <td class="no-print"><button onclick="cloudDelete('dues', '${d.id}')" class="text-red-300">×</button></td>
+                    </tr>`;
+                    if(d.type === 'customer') activeCust.innerHTML += rowHtml; else activePay.innerHTML += rowHtml;
+                }
             });
-            
-            const eo = document.getElementById('exp-total-office'); if(eo) eo.textContent = off.toFixed(3);
-            const ep = document.getElementById('exp-total-personal'); if(ep) ep.textContent = per.toFixed(3);
-            const eg = document.getElementById('exp-total-grand'); if(eg) eg.textContent = (off+per).toFixed(3);
-            lucide.createIcons();
+
+            const r = data.filter(d => d.type === 'customer' && d.status === 'Pending').reduce((a,v) => a + v.amount, 0);
+            const p = data.filter(d => d.type === 'payable' && d.status === 'Pending').reduce((a,v) => a + v.amount, 0);
+            const b = data.filter(d => d.type === 'bank').reduce((a,v) => a + v.amount, 0);
+            document.getElementById('due-sum-receive').textContent = r.toFixed(3);
+            document.getElementById('due-sum-pay').textContent = p.toFixed(3);
+            document.getElementById('due-sum-bank').textContent = b.toFixed(3);
+            document.getElementById('due-sum-net').textContent = (r + b - p).toFixed(3);
         }
 
-        // --- DASHBOARD ---
-        window.updateDashboard = function() {
-             // Re-implement chart logic using window.state.ledger / dues / expenses
+        function renderTasks() {
+            const list = document.getElementById('task-list');
+            list.innerHTML = window.cloudState.tasks.sort((a,b) => b.id - a.id).map(t => `<li class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100 shadow-sm"><span class="text-sm font-medium text-gray-700">${t.text}</span><button onclick="cloudDelete('tasks', '${t.id}')" class="text-red-300 hover:text-red-500">×</button></li>`).join('');
         }
+
+        function renderSalam() {
+            const activeList = document.getElementById('salam-active-list');
+            const historyList = document.getElementById('salam-history-list');
+            const data = window.cloudState.salam.sort((a,b) => new Date(a.date) - new Date(b.date));
+            const today = new Date().toISOString().split('T')[0];
+            
+            activeList.innerHTML = data.filter(s => s.status !== 'Completed').map(s => `
+                <div class="p-3 rounded-xl border-l-4 ${s.date <= today ? 'bg-red-50 border-red-500' : 'bg-gray-50 border-green-500'} shadow-sm">
+                    <div class="flex justify-between font-bold text-[10px]"><span>PNR: ${s.pnr}</span><span>FLIGHT: ${s.date}</span></div>
+                    <div class="text-sm font-bold">${s.name}</div>
+                    <div class="flex gap-2 mt-2">
+                        <button onclick="cloudSave('salam', {...${JSON.stringify(s)}, status: 'Completed'})" class="text-[8px] font-black text-green-600 border px-3 py-1 rounded uppercase">Done</button>
+                        <button onclick="cloudDelete('salam', '${s.id}')" class="text-[8px] font-black text-red-300 uppercase">Clear</button>
+                    </div>
+                </div>
+            `).join('');
+
+            historyList.innerHTML = data.filter(s => s.status === 'Completed').map(s => `
+                <div class="p-2 bg-gray-100 rounded text-[10px] flex justify-between items-center">
+                    <span>${s.name} (${s.pnr}) - ${s.date}</span>
+                    <button onclick="cloudSave('salam', {...${JSON.stringify(s)}, status: 'Active'})" class="text-blue-500 font-bold uppercase">Restore</button>
+                </div>
+            `).join('');
+        }
+
+        function renderExpenses() {
+            const body = document.getElementById('expense-table-body');
+            const filter = document.getElementById('exp-month-filter').value;
+            const data = window.cloudState.expenses.filter(e => !filter || e.date.startsWith(filter)).sort((a,b) => b.id - a.id);
+            body.innerHTML = data.map(e => `<tr><td>${e.date}</td><td class="font-medium">${e.desc}</td><td class="text-right font-black text-red-600 font-mono">${e.amount.toFixed(3)}</td><td class="no-print"><button onclick="cloudDelete('expenses', '${e.id}')" class="text-gray-300">×</button></td></tr>`).join('');
+            document.getElementById('exp-sum').textContent = data.reduce((a,v) => a + v.amount, 0).toFixed(3);
+        }
+
+        // ACTIONS
+        window.handleHisabSubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('h-id').value || Date.now().toString();
+            await cloudSave('ledger', {
+                id, date: document.getElementById('h-date').value || new Date().toISOString().split('T')[0],
+                name: document.getElementById('h-name').value, pnr: document.getElementById('h-pnr').value,
+                fdate: document.getElementById('h-fdate').value, sector: document.getElementById('h-sector').value,
+                net: parseFloat(document.getElementById('h-net').value), sell: parseFloat(document.getElementById('h-sell').value),
+                due: parseFloat(document.getElementById('h-due').value) || 0
+            });
+            resetHisabForm();
+        };
+
+        window.addDueCloudRow = async (type) => {
+            await cloudSave('dues', { type, name: type === 'bank' ? 'Bank Deposit' : 'New Entry', amount: 0, status: 'Pending', date: new Date().toISOString().split('T')[0], id: Date.now().toString() });
+        };
+
+        window.addTask = async (e) => {
+            e.preventDefault();
+            const text = document.getElementById('task-input').value;
+            if(!text) return;
+            await cloudSave('tasks', { text, id: Date.now().toString() });
+            document.getElementById('task-input').value = '';
+        };
+
+        window.addSalam = async (e) => {
+            e.preventDefault();
+            await cloudSave('salam', { pnr: document.getElementById('salam-pnr').value, name: document.getElementById('salam-name').value, date: document.getElementById('salam-date').value, status: 'Active', id: Date.now().toString() });
+            e.target.reset();
+        };
+
+        window.addExpense = async (e) => {
+            e.preventDefault();
+            await cloudSave('expenses', { date: document.getElementById('exp-date').value || new Date().toISOString().split('T')[0], desc: document.getElementById('exp-desc').value, amount: parseFloat(document.getElementById('exp-amt').value), id: Date.now().toString() });
+            e.target.reset();
+        };
+
+        // DASHBOARD ENGINE
+        let sChart, pChart;
+        window.updateDashboard = () => {
+            const l = window.cloudState.ledger;
+            const sell = l.reduce((a,v) => a + v.sell, 0);
+            const profit = l.reduce((a,v) => a + (v.sell - v.net), 0);
+            const due = window.cloudState.dues.filter(d => d.type === 'customer' && d.status === 'Pending').reduce((a,v) => a + v.amount, 0);
+
+            document.getElementById('dash-total-sell').textContent = sell.toFixed(3);
+            document.getElementById('dash-total-profit').textContent = profit.toFixed(3);
+            document.getElementById('dash-total-due').textContent = due.toFixed(3);
+
+            // Alerts
+            const alertBox = document.getElementById('dashboard-alerts');
+            const today = new Date().toISOString().split('T')[0];
+            const urgent = window.cloudState.salam.filter(s => s.status !== 'Completed' && s.date <= today);
+            if(urgent.length > 0) {
+                alertBox.classList.remove('hidden');
+                alertBox.innerHTML = `<div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl flex justify-between items-center shadow-sm"><div class="flex items-center gap-3"><i data-lucide="bell-ring" class="text-amber-600 animate-pulse"></i><div><p class="font-bold text-amber-900">${urgent.length} URGENT CHECK-INS</p><p class="text-[10px] text-amber-600 font-bold uppercase">Scheduled for today or past</p></div></div><button onclick="switchTab('notes')" class="bg-amber-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm">Go to Tracker</button></div>`;
+                lucide.createIcons();
+            } else { alertBox.classList.add('hidden'); }
+
+            // Charts
+            const months = [...new Set(l.map(i => i.date.substring(0,7)))].sort().slice(-6);
+            const sData = months.map(m => l.filter(i => i.date.startsWith(m)).reduce((a,v) => a+v.sell, 0));
+            const pData = months.map(m => l.filter(i => i.date.startsWith(m)).reduce((a,v) => a+(v.sell-v.net), 0));
+
+            if(sChart) sChart.destroy();
+            sChart = new Chart(document.getElementById('salesChart'), { type: 'bar', data: { labels: months, datasets: [{ label: 'Sales', data: sData, backgroundColor: '#3b82f6' }] } });
+            if(pChart) pChart.destroy();
+            pChart = new Chart(document.getElementById('profitChart'), { type: 'line', data: { labels: months, datasets: [{ label: 'Profit', data: pData, borderColor: '#10b981', tension: 0.3 }] } });
+        };
+
+        // INVOICE SYSTEM
+        window.togglePaidStamp = () => document.getElementById('paid-watermark').classList.toggle('is-visible', document.getElementById('paid-toggle').checked);
         
-        // --- NOTES ---
-        window.loadGeneralNotes = function() {
-            const list = document.getElementById('notes-list');
-            if(!list) return;
-            list.innerHTML = '';
-            (window.state.tasks || []).forEach(note => {
-                const li = document.createElement('li');
-                li.className = "flex justify-between p-2 bg-gray-50 border rounded";
-                li.innerHTML = `<span>${note.text}</span><button onclick="window.cloudDelete('tasks', ${note.id})" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
-                list.appendChild(li);
-            });
-            lucide.createIcons();
-        }
-        
-        window.addNote = function() {
-            const input = document.getElementById('note-input');
-            if(!input.value) return;
-            window.cloudAdd('tasks', { id: Date.now(), text: input.value });
-            input.value = '';
+        window.saveInvoice = async () => {
+            const num = document.getElementById('inv-num').textContent.trim();
+            const client = document.getElementById('inv-client').textContent;
+            const total = parseFloat(document.getElementById('inv-total').textContent);
+            const date = document.getElementById('inv-date').textContent;
+            
+            const data = {
+                num, date, client, phone: document.getElementById('inv-phone').textContent, total,
+                items: Array.from(document.querySelectorAll('.inv-row')).map(r => ({ d: r.querySelector('.d').textContent, a: parseFloat(r.querySelector('.a').textContent) })),
+                paid: document.getElementById('paid-toggle').checked
+            };
+            
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'invoices', num), data);
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'config'), { invoiceNum: parseInt(num) + 1 });
+            
+            if(total > 0 && confirm("Add this invoice to the ledger?")) {
+                const parts = date.split('/');
+                const isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                await cloudSave('ledger', { id: 'INV_'+num, date: isoDate, name: client, net: 0, sell: total, sector: 'Invoice: '+num });
+            }
+            alert("Invoice Synced to Cloud Successfully");
+        };
+
+        window.loadInvoice = async () => {
+            const num = document.getElementById('search-invoice').value;
+            if(!num) return;
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'invoices', num.padStart(4, '0')));
+            if(snap.exists()){
+                const d = snap.data();
+                document.getElementById('inv-num').textContent = d.num;
+                document.getElementById('inv-date').textContent = d.date;
+                document.getElementById('inv-client').textContent = d.client;
+                document.getElementById('inv-phone').textContent = d.phone;
+                document.getElementById('paid-toggle').checked = d.paid || false;
+                togglePaidStamp();
+                document.getElementById('inv-items').innerHTML = '';
+                d.items.forEach(i => addInvRow(i.d, i.a.toFixed(3)));
+            } else { alert("Invoice not found in cloud archive"); }
+        };
+
+        window.addInvRow = (desc = "Air Ticket / Sector Detail", amt = "0.000") => {
+            const tr = document.createElement('tr'); tr.className = "inv-row border-b";
+            tr.innerHTML = `<td class="p-4 d font-medium" contenteditable="true">${desc}</td><td class="p-4 a text-right font-black font-mono" contenteditable="true" oninput="calcInv()">${amt}</td><td class="no-print text-center"><button onclick="this.parentElement.parentElement.remove(); calcInv()" class="text-red-300 hover:text-red-500">×</button></td>`;
+            document.getElementById('inv-items').appendChild(tr); calcInv();
+        };
+
+        window.calcInv = () => {
+            const total = Array.from(document.querySelectorAll('.a')).reduce((acc, v) => acc + (parseFloat(v.textContent) || 0), 0);
+            document.getElementById('inv-subtotal').textContent = total.toFixed(3);
+            document.getElementById('inv-total').textContent = total.toFixed(3);
+        };
+
+        // UI HELPERS
+        window.switchTab = (tab) => {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(b => b.className = "tab-btn flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50");
+            document.getElementById(`btn-tab-${tab}`).className = "tab-btn flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md";
+            window.currentTab = tab;
+            if(tab === 'due') renderDues();
+        };
+
+        window.toggleDarkMode = () => document.body.classList.toggle('dark');
+        window.resetHisabForm = () => { document.getElementById('hisab-form').reset(); document.getElementById('h-id').value = ''; document.getElementById('hisab-submit-btn').textContent = "ADD"; };
+        window.editHisabRow = (id) => {
+            const i = window.cloudState.ledger.find(item => item.id === id); if(!i) return;
+            document.getElementById('h-id').value = id; document.getElementById('h-date').value = i.date;
+            document.getElementById('h-name').value = i.name; document.getElementById('h-pnr').value = i.pnr;
+            document.getElementById('h-fdate').value = i.fdate || ''; document.getElementById('h-sector').value = i.sector || '';
+            document.getElementById('h-net').value = i.net; document.getElementById('h-sell').value = i.sell;
+            document.getElementById('h-due').value = i.due; document.getElementById('hisab-submit-btn').textContent = "UPDATE";
+        };
+
+        window.exportFullBackup = () => {
+            const blob = new Blob([JSON.stringify(window.cloudState)], {type: "application/json"});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = `Holiday_Cloud_FullBackup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+        };
+
+        window.restoreBackup = async (input) => {
+            const file = input.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = JSON.parse(e.target.result);
+                if(confirm("Sync this backup to the cloud? This will update all cloud items.")) {
+                    if(data.ledger) for(const i of data.ledger) await cloudSave('ledger', i);
+                    if(data.dues) for(const i of data.dues) await cloudSave('dues', i);
+                    if(data.tasks) for(const i of data.tasks) await cloudSave('tasks', i);
+                    if(data.salam) for(const i of data.salam) await cloudSave('salam', i);
+                    if(data.expenses) for(const i of data.expenses) await cloudSave('expenses', i);
+                    alert("Cloud Restore Finished!");
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        window.resetInvoice = () => {
+            document.getElementById('inv-client').textContent = "Customer Name";
+            document.getElementById('inv-phone').textContent = "968...";
+            document.getElementById('inv-items').innerHTML = '';
+            document.getElementById('paid-toggle').checked = false;
+            togglePaidStamp();
+            addInvRow();
+        };
+
+        // NEW: AUTO CLEAR LOGIC
+        function setupAutoClear(id, defaultText) {
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.addEventListener('focus', () => { if(el.innerText.trim() === defaultText) el.innerText = ''; });
+            el.addEventListener('blur', () => { if(el.innerText.trim() === '') el.innerText = defaultText; });
         }
 
-        setTodayDate();
+        // INIT
+        document.getElementById('hisab-month-filter').value = new Date().toISOString().substring(0,7);
+        document.getElementById('exp-month-filter').value = new Date().toISOString().substring(0,7);
+        document.getElementById('inv-date').textContent = new Date().toLocaleDateString('en-GB');
+        addInvRow();
+        lucide.createIcons();
+        
+        // Setup the specific behaviors for invoice
+        setupAutoClear('inv-client', 'Customer Name');
+        setupAutoClear('inv-phone', '968...');
     </script>
 </body>
 </html>
