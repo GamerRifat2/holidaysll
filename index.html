@@ -460,7 +460,7 @@
                                     <th style="width: 25%">Customer Name</th>
                                     <th style="width: 15%">Phone (Opt)</th>
                                     <th style="width: 20%">Amount</th>
-                                    <th style="width: 20%">Promise Date (Opt)</th>
+                                    <th style="width: 20%">Notes</th>
                                     <th style="width: 15%">Status</th>
                                     <th class="no-print" style="width: 5%"></th>
                                 </tr>
@@ -497,7 +497,7 @@
                                     <th style="width: 10%">Type</th>
                                     <th style="width: 25%">Name / Details</th>
                                     <th style="width: 15%">Amount</th>
-                                    <th style="width: 15%">Promise Date</th>
+                                    <th style="width: 15%">Notes / Due Date</th>
                                     <th style="width: 15%">Paid Date</th>
                                     <th style="width: 10%">Status</th>
                                     <th class="no-print" style="width: 10%"></th>
@@ -561,7 +561,7 @@
                         </div>
                         <div class="flex-grow min-w-[200px]">
                             <label class="block text-xs font-bold text-gray-500 mb-1">Description</label>
-                            <input type="text" id="exp-desc" placeholder="Expense Details..." class="w-full p-2 border border-gray-300 rounded text-sm bg-gray-50" required>
+                            <input type="text" id="exp-desc" placeholder="Expense Details..." class="w-full p-2 border border-gray-300 rounded text-sm" required>
                         </div>
                         <div class="w-32">
                             <label class="block text-xs font-bold text-gray-500 mb-1">Type</label>
@@ -593,109 +593,6 @@
                         <tbody id="expense-table-body" class="text-gray-700 font-mono"></tbody>
                     </table>
                 </div>
-            </div>
-        </div>
-
-        <!-- TAB 5: INVOICE GENERATOR -->
-        <div id="tab-invoice" class="tab-content">
-            <!-- Controls -->
-            <div class="controls bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 justify-between items-center mb-6 max-w-[210mm] mx-auto">
-                <div class="flex items-center gap-2 flex-grow max-w-md">
-                    <input type="number" id="search-input" placeholder="Search Invoice No" class="flex-grow p-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:outline-none text-sm">
-                    <button onclick="searchInvoice()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">Search</button>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="generateNewInvoice()" class="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-200 font-bold border border-gray-300"><i data-lucide="plus" class="w-4 h-4"></i> New</button>
-                    <button onclick="saveInvoice()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-bold shadow-sm"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
-                    <button onclick="window.print()" class="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 font-bold shadow-sm"><i data-lucide="printer" class="w-4 h-4"></i> Print</button>
-                </div>
-                <div class="w-full flex justify-end mt-2 items-center gap-2">
-                    <label class="flex items-center gap-2 cursor-pointer hover:text-green-600 font-bold text-sm text-gray-500">
-                        <input type="checkbox" id="paid-toggle" class="rounded text-green-600 focus:ring-green-500">
-                        <span>Mark as PAID</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- INVOICE PAPER -->
-            <div class="invoice-paper" id="invoice-view">
-                <div id="paid-watermark" class="paid-seal"><div class="text-5xl font-black uppercase tracking-wider">PAID</div><div class="text-3xl font-bold arabic-text mt-0">مدفوع</div></div>
-                
-                <header class="flex flex-col md:flex-row justify-between items-center pb-6 border-b relative z-10 gap-4">
-                    <div class="text-center md:text-left w-full md:w-1/3 pt-2">
-                        <h1 class="font-bold text-gray-800 text-lg uppercase leading-tight mb-1">HOLIDAY TRAVELS</h1>
-                        <p class="text-xs text-gray-600">NEAR PAK MOSJID SALALAH</p>
-                        <p class="text-xs text-gray-600">Salalah, Sultanate of Oman</p>
-                        <p class="text-xs text-gray-600 mt-1"><strong>Phone:</strong> 78594007</p>
-                        <p class="text-xs text-gray-600"><strong>Email:</strong> HOLIDAYTRAVELS.OM@GMAIL.COM</p>
-                    </div>
-                    <div class="text-center w-full md:w-1/3 flex justify-center">
-                        <img id="invoice-logo-img" src="LOGO.png" onerror="this.style.display='none'" alt="Logo" class="h-28 w-auto object-contain mx-auto">
-                    </div>
-                    <div class="text-center md:text-right w-full md:w-1/3 pt-2 arabic-text">
-                        <h1 contenteditable="true" class="editable font-bold text-gray-800 text-xl leading-tight mb-1">سفريات هوليداي</h1>
-                        <p contenteditable="true" class="editable text-sm text-gray-600">بالقرب من المسجد الباكستاني</p>
-                        <p contenteditable="true" class="editable text-sm text-gray-600">صلالة، سلطنة عمان</p>
-                        <p class="text-sm text-gray-600 mt-1"><strong class="mx-1">هاتف:</strong><span class="font-sans" contenteditable="true">78594007</span></p>
-                        <p class="text-sm text-gray-600"><strong class="mx-1">بريد إلكتروني:</strong><span class="font-sans text-xs" contenteditable="true">HOLIDAYTRAVELS.OM@GMAIL.COM</span></p>
-                    </div>
-                </header>
-
-                <div class="flex justify-between items-center mt-6 mb-6">
-                    <div class="text-left">
-                        <div class="flex flex-col">
-                            <span class="text-gray-500 text-xs font-bold uppercase">Invoice No</span>
-                            <span id="invoice-number" contenteditable="true" class="editable text-xl font-bold text-gray-800 font-mono outline-none" title="Click to edit">9877</span>
-                        </div>
-                    </div>
-                    <div class="text-center"><h2 class="text-3xl font-bold uppercase text-gray-800 tracking-wide">INVOICE <span class="arabic-text font-normal text-2xl">فاتورة</span></h2></div>
-                    <div class="text-right"><div class="flex flex-col"><span class="text-gray-500 text-xs font-bold uppercase">Date</span><span id="invoice-date" contenteditable="true" class="editable text-xl font-bold text-gray-800"></span></div></div>
-                </div>
-
-                <section class="mb-8 bg-gray-50 rounded-lg p-4 border border-gray-100">
-                    <div class="flex justify-between items-end mb-2"><h3 class="text-xs font-bold uppercase text-gray-500 tracking-wider">Billed To</h3><h3 class="text-sm font-bold text-gray-500 arabic-text">فاتورة إلى</h3></div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block text-xs text-gray-400">Customer Name</label><div contenteditable="true" id="customer-name" class="editable text-lg font-bold text-gray-800 w-full p-1" data-placeholder="Name">Customer Name</div></div>
-                        <div class="md:text-right"><label class="block text-xs text-gray-400">Phone</label><div contenteditable="true" id="customer-phone" class="editable text-gray-600 w-full p-1 font-sans" data-placeholder="Phone">Phone Number</div></div>
-                    </div>
-                </section>
-
-                <section class="flex-grow">
-                    <table class="w-full text-left">
-                        <thead>
-                            <tr class="bg-gray-800 text-white">
-                                <th class="p-3 text-sm font-semibold uppercase tracking-wider w-3/4 rounded-tl-lg rounded-bl-lg"><div class="flex justify-between"><span>Item Description</span><span class="arabic-text font-normal">تفاصيل</span></div></th>
-                                <th class="p-3 text-right text-sm font-semibold uppercase tracking-wider w-1/4 rounded-tr-lg rounded-br-lg"><div class="flex flex-col items-end"><span>Amount (OMR)</span><span class="arabic-text text-xs text-gray-300">المبلغ</span></div></th>
-                                <th class="w-10 no-print bg-white"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="items-table-body"></tbody>
-                    </table>
-                    <button id="add-item-btn" onclick="addRow()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Add Item</button>
-                </section>
-
-                <section class="mt-8 flex justify-end">
-                    <div class="w-72">
-                        <div class="flex justify-between items-center py-2 border-b border-gray-200"><span class="text-gray-600 font-medium text-sm">Subtotal</span><span class="font-bold text-gray-800"><span id="subtotal">0.000</span></span></div>
-                        <div class="flex justify-between items-center py-3 bg-gray-100 px-4 rounded-lg mt-3 border border-gray-200"><span class="text-lg font-bold text-gray-800">Total</span><span class="text-xl font-bold text-blue-900"><span id="total">0.000</span> <span class="text-sm text-gray-500">OMR</span></span></div>
-                    </div>
-                </section>
-
-                <footer class="mt-12 pt-6 border-t border-gray-200 text-gray-500 text-sm">
-                    <div class="flex flex-col md:flex-row justify-between items-end">
-                        <div class="text-left space-y-1">
-                            <p class="text-xs uppercase font-bold text-gray-800">Company Reg Details</p>
-                            <p class="font-bold text-gray-700">Sajer Desert Rare Trading Company</p>
-                            <p class="font-bold text-gray-700 arabic-text">شركة صحراء ساجر للتجارة النادرة</p>
-                            <p><strong class="text-xs">CR No:</strong> <span class="font-mono">1588173</span></p>
-                        </div>
-                        <div class="mt-4 md:mt-0 flex flex-col items-center">
-                            <img src="WHATSAPP.jpg" onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1200px-WhatsApp.svg.png'" alt="WhatsApp" class="w-16 h-16 object-contain mb-1">
-                            <p class="text-xs font-bold text-green-600">Contact Support</p>
-                        </div>
-                    </div>
-                    <p class="mt-8 italic text-center text-[10px] text-gray-400">This invoice is electronically generated / هذه الفاتورة صادرة إلكترونياً</p>
-                </footer>
             </div>
         </div>
 
@@ -1369,7 +1266,8 @@
                 amount: '', // Empty for placeholder
                 date: new Date().toISOString().split('T')[0],
                 status: 'Pending',
-                paymentDate: ''
+                paymentDate: '',
+                notes: '' // Initialize notes
             };
             data.push(newItem);
             localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
@@ -1397,7 +1295,8 @@
                             amount: val,
                             status: 'Paid',
                             paymentDate: new Date().toISOString().split('T')[0],
-                            name: data[index].name + ' (Partial)'
+                            name: data[index].name + ' (Partial)',
+                            notes: data[index].notes // Keep notes
                         };
                         data.push(historyItem);
                         
@@ -1420,10 +1319,12 @@
 
                 data[index][field] = value;
                 
+                // Auto-set Payment Date when marked Paid
                 if(field === 'status' && value === 'Paid' && !data[index].paymentDate) {
                     data[index].paymentDate = new Date().toISOString().split('T')[0];
                 }
-                if(field === 'status' && value === 'Pending') {
+                // Clear Payment Date if NOT Paid
+                if(field === 'status' && (value === 'Pending' || value === 'Urgent')) {
                     data[index].paymentDate = '';
                 }
 
@@ -1470,8 +1371,9 @@
             let totalReceive = 0, totalPay = 0, totalBank = 0;
             data.forEach(item => {
                 const amt = parseFloat(item.amount) || 0;
-                if (item.type === 'customer' && item.status === 'Pending') totalReceive += amt;
-                if (item.type === 'payable' && item.status === 'Pending') totalPay += amt;
+                // Include both Pending AND Urgent in totals
+                if (item.type === 'customer' && (item.status === 'Pending' || item.status === 'Urgent')) totalReceive += amt;
+                if (item.type === 'payable' && (item.status === 'Pending' || item.status === 'Urgent')) totalPay += amt;
                 if (item.type === 'bank') totalBank += amt;
             });
             
@@ -1513,8 +1415,8 @@
                         if (bankContainer && bankContainer.childElementCount < 5) {
                             bankContainer.appendChild(createBankRow(item));
                         }
-                    } else if (item.status === 'Pending') {
-                        // Show all pending
+                    } else if (item.status === 'Pending' || item.status === 'Urgent') {
+                        // Show all pending AND urgent
                         const row = createEditableRow(item);
                         if (item.type === 'customer' && custContainer) custContainer.appendChild(row);
                         else if(payContainer) payContainer.appendChild(row);
@@ -1546,17 +1448,31 @@
             // Fix for existing data showing "Name" or "0"
             const nameVal = item.name === 'Name' ? '' : item.name;
             const amtVal = (item.amount === 0 || item.amount === '0') ? '' : item.amount;
+            
+            // Notes vs Date logic based on type
+            let dateOrNotes = '';
+            if (item.type === 'customer') {
+                dateOrNotes = `<input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.notes || ''}" placeholder="Notes..." onchange="updateDueItem(${item.id}, 'notes', this.value)">`;
+            } else {
+                dateOrNotes = `<input type="date" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)">`;
+            }
+
+            // Style based on status
+            let statusColor = "text-amber-600 font-medium"; // Default Pending (Yellow/Amber)
+            if(item.status === 'Urgent') statusColor = "text-red-600 font-bold bg-red-50"; 
+            if(item.status === 'Paid') statusColor = "text-green-600 font-bold";
 
             row.innerHTML = `
                 <td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${nameVal}" placeholder="Name" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
                 ${phoneHtml}
                 <td><input type="number" step="0.001" class="w-full p-1 border rounded bg-white text-gray-800 text-sm font-mono" value="${amtVal}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
-                <td><input type="date" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
+                <td>${dateOrNotes}</td>
                 <td>
-                    <select class="w-full p-1 border rounded bg-white text-sm ${item.status === 'Paid' ? 'text-green-600 font-bold' : 'text-orange-600'}" onchange="updateDueItem(${item.id}, 'status', this.value)">
+                    <select class="w-full p-1 border rounded bg-white text-sm ${statusColor}" onchange="updateDueItem(${item.id}, 'status', this.value)">
                         <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                        <option value="Partial">Partial Pay</option>
-                        <option value="Paid" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
+                        <option value="Urgent" class="text-red-600 font-bold" ${item.status === 'Urgent' ? 'selected' : ''}>Urgent (ASAP)</option>
+                        <option value="Partial" class="text-blue-600">Partial Pay</option>
+                        <option value="Paid" class="text-green-600 font-bold" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
                     </select>
                 </td>
                 <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
@@ -1588,12 +1504,15 @@
             if (item.type === 'customer' && item.phone) {
                 displayDetails += ` <span class="text-xs text-gray-500">(${item.phone})</span>`;
             }
+            
+            // Notes logic for history
+            let noteContent = item.type === 'customer' ? (item.notes || '-') : item.date;
 
             row.innerHTML = `
                 <td class="text-center">${typeLabel}</td>
                 <td class="font-medium">${displayDetails}</td>
                 <td class="font-mono">${parseFloat(item.amount).toFixed(3)}</td>
-                <td class="text-xs text-gray-500">${item.date}</td>
+                <td class="text-xs text-gray-500">${noteContent}</td>
                 <td><input type="date" class="w-full p-1 border rounded bg-gray-50 text-xs" value="${dateValue}" onchange="updateDueItem(${item.id}, 'paymentDate', this.value)"></td>
                 <td>
                     <select class="w-full p-1 border rounded bg-green-50 text-green-700 text-xs font-bold" onchange="updateDueItem(${item.id}, 'status', this.value)">
@@ -1655,73 +1574,6 @@
             
             // 6. CHECK-IN ALERTS
             updateDashboardCheckins();
-        }
-
-        function updateDashboardCheckins() {
-            const reminders = getSalamReminders(); // Uses existing function from Notes logic
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate() + 1);
-            
-            const urgent = [];
-            
-            reminders.forEach(r => {
-                const flightDate = new Date(r.date);
-                flightDate.setHours(0,0,0,0);
-                
-                // Check if Today or Tomorrow
-                if (flightDate.getTime() === today.getTime() || flightDate.getTime() === tomorrow.getTime()) {
-                    urgent.push(r);
-                }
-            });
-            
-            const alertBox = document.getElementById('dashboard-alerts');
-            if (!alertBox) return;
-
-            if (urgent.length > 0) {
-                alertBox.classList.remove('hidden');
-                let html = `
-                <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r shadow-sm">
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="flex items-center">
-                            <i data-lucide="bell-ring" class="h-6 w-6 text-amber-600 mr-3 animate-pulse"></i>
-                            <div>
-                                <h3 class="text-lg font-bold text-amber-900">Urgent Check-ins Needed (${urgent.length})</h3>
-                                <p class="text-sm text-amber-700">Passengers flying within 48 hours.</p>
-                            </div>
-                        </div>
-                        <button onclick="switchTab('notes')" class="bg-amber-600 text-white text-xs px-4 py-1.5 rounded-lg font-bold hover:bg-amber-700 shadow-sm transition-colors">
-                            Go to Check-in
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">`;
-                    
-                urgent.forEach(r => {
-                     const fDate = new Date(r.date);
-                     fDate.setHours(0,0,0,0);
-                     const isToday = fDate.getTime() === today.getTime();
-                     const badge = isToday 
-                        ? `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-red-200">Flight Today</span>` 
-                        : `<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-blue-200">Tomorrow</span>`;
-                     
-                     html += `
-                      <div class="flex justify-between items-center bg-white p-2.5 rounded border border-amber-100 shadow-sm">
-                        <div class="flex flex-col">
-                            <span class="font-bold text-gray-800 text-sm">${r.name}</span>
-                            <span class="font-mono text-xs text-gray-500">PNR: ${r.pnr}</span>
-                        </div>
-                        ${badge}
-                      </div>`;
-                });
-                
-                html += `</div></div>`;
-                alertBox.innerHTML = html;
-                lucide.createIcons();
-            } else {
-                alertBox.classList.add('hidden');
-                alertBox.innerHTML = '';
-            }
         }
 
         let salesChartInstance = null;
@@ -1835,8 +1687,21 @@
             reader.onload = (e) => {
                 try {
                     const data = JSON.parse(e.target.result);
+                    
+                    // Wipe existing App Data to prevent mixing versions
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key.startsWith('holiday_') || key === 'holidayTravelsInvoiceNum') {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    keysToRemove.forEach(k => localStorage.removeItem(k));
+
+                    // Load Backup Data
                     Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
-                    alert('Data Restored Successfully!');
+                    
+                    alert('Data Replaced Successfully!');
                     location.reload();
                 } catch(e) { alert('Invalid File'); }
             };
