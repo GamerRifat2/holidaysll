@@ -109,18 +109,31 @@
             #tab-expense.active { width: 100%; }
             #tab-notes.active { width: 100%; }
             
-            /* Due Tab Print Styling */
+            /* Due Tab Print Styling (Divided Statement Look) */
             #tab-due.active .print-header { display: flex !important; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
             #tab-due.active .print-header img { height: 60px; }
             #tab-due.active .print-header .company-details { text-align: right; }
-            #tab-due.active .grid { display: block !important; } 
-            #tab-due.active .grid > div { margin-bottom: 15px; border: 1px solid #000; page-break-inside: avoid; background: #fff !important; } 
-            #tab-due.active .grid-cols-1 { display: block !important; } 
-            #tab-due.active #due-active-view { display: block !important; }
-            #tab-due.active #due-active-view > div { margin-bottom: 30px; page-break-inside: avoid; } 
             
-            .excel-table th, .excel-table td { border: 1px solid #000 !important; font-size: 10px; color: black !important; background: white !important; } 
-            .excel-table input, .excel-table select { border: none !important; padding: 0 !important; background: transparent !important; width: auto !important; }
+            /* Stats Row */
+            #tab-due.active .grid { display: flex !important; flex-direction: row; gap: 10px; margin-bottom: 20px; }
+            #tab-due.active .grid > div { flex: 1; border: 1px solid #000; background: #fff !important; padding: 8px; }
+            #tab-due.active .grid > div p:first-child { font-size: 9px; font-weight: bold; text-transform: uppercase; color: #000; }
+            #tab-due.active .grid > div p:nth-child(2) { font-size: 14px; font-weight: bold; color: #000; }
+            
+            /* Layout: Side-by-Side for Dues/Payables */
+            #tab-due.active #due-active-view { display: grid !important; grid-template-columns: 48% 48%; gap: 4%; padding: 0 !important; }
+            #tab-due.active #due-active-view > div { border: 1px solid #000; padding: 0; margin-bottom: 10px; }
+            
+            /* Bank spans full width below */
+            #tab-due.active #due-active-view > div:nth-child(3) { grid-column: 1 / -1; margin-top: 10px; } 
+            
+            /* Print Headers */
+            #tab-due.active h3 { font-size: 10pt; font-weight: bold; border-bottom: 1px solid #000; padding: 5px; margin: 0; background-color: #eee !important; -webkit-print-color-adjust: exact; text-transform: uppercase; }
+
+            /* Table cleanup */
+            .excel-table { width: 100%; border: none; }
+            .excel-table th, .excel-table td { border: 1px solid #ccc !important; font-size: 9px; color: black !important; padding: 3px; } 
+            .excel-table input, .excel-table select { border: none !important; padding: 0 !important; background: transparent !important; width: 100% !important; font-size: 9px; }
 
             #tab-dashboard.active .chart-container { page-break-inside: avoid; }
             
