@@ -354,8 +354,8 @@
                                 <input type="text" id="salam-pnr" class="w-full p-2 border border-gray-300 rounded text-sm font-mono" placeholder="ABC123" required>
                             </div>
                             <div class="flex-grow">
-                                <label class="block text-[10px] font-bold text-gray-500 mb-1">Last Name</label>
-                                <input type="text" id="salam-name" class="w-full p-2 border border-gray-300 rounded text-sm" placeholder="Surname" required>
+                                <label class="block text-[10px] font-bold text-gray-500 mb-1">Name</label>
+                                <input type="text" id="salam-name" class="w-full p-2 border border-gray-300 rounded text-sm" placeholder="Passenger Name" required>
                             </div>
                             <div>
                                 <label class="block text-[10px] font-bold text-gray-500 mb-1">Flight Date</label>
@@ -372,7 +372,7 @@
                                 <tr class="bg-gray-50">
                                     <th style="width: 25%">Flight Date</th>
                                     <th style="width: 20%">PNR</th>
-                                    <th style="width: 35%">Last Name</th>
+                                    <th style="width: 35%">Name</th>
                                     <th style="width: 20%">Action</th>
                                 </tr>
                             </thead>
@@ -602,19 +602,19 @@
             <div class="controls bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 justify-between items-center mb-6 max-w-[210mm] mx-auto">
                 <div class="flex items-center gap-2 flex-grow max-w-md">
                     <input type="number" id="search-input" placeholder="Search Invoice No" class="flex-grow p-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:outline-none text-sm">
-                    <button onclick="searchInvoice()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">Search</button>
+                    <button onclick="window.searchInvoice()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm hover:bg-gray-700">Search</button>
+                    <button onclick="window.resetSearch()" class="text-gray-500 hover:text-red-500 p-2" title="Reset/Clear"><i data-lucide="x-circle" class="w-5 h-5"></i></button>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="generateNewInvoice()" class="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-200 font-bold border border-gray-300"><i data-lucide="plus" class="w-4 h-4"></i> New</button>
-                    <button onclick="saveInvoice()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-bold shadow-sm"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
+                    <button onclick="window.generateNewInvoice()" class="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-200 font-bold border border-gray-300"><i data-lucide="plus" class="w-4 h-4"></i> New</button>
+                    <button onclick="window.saveInvoice()" class="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-bold shadow-sm"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
                     <button onclick="window.print()" class="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 font-bold shadow-sm"><i data-lucide="printer" class="w-4 h-4"></i> Print</button>
                 </div>
                 <div class="w-full flex justify-end mt-2 items-center gap-2">
                     <label class="flex items-center gap-2 cursor-pointer hover:text-green-600 font-bold text-sm text-gray-500">
-                        <input type="checkbox" id="paid-toggle" class="rounded text-green-600 focus:ring-green-500">
+                        <input type="checkbox" id="paid-toggle" class="rounded text-green-600 focus:ring-green-500" onchange="window.togglePaidStamp()">
                         <span>Mark as PAID</span>
                     </label>
-                    <p id="system-message" class="text-sm font-bold text-blue-600 ml-4 hidden"></p>
                 </div>
             </div>
 
@@ -672,7 +672,7 @@
                         </thead>
                         <tbody id="items-table-body"></tbody>
                     </table>
-                    <button id="add-item-btn" onclick="addRow()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Add Item</button>
+                    <button id="add-item-btn" onclick="window.addRow()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Add Item</button>
                 </section>
 
                 <section class="mt-8 flex justify-end">
@@ -784,7 +784,7 @@
             if(tabName === 'notes') loadNotes(); 
             if(tabName === 'invoice') {
                 const tbody = document.getElementById('items-table-body');
-                if(tbody && tbody.children.length === 0) addRow();
+                if(tbody && tbody.children.length === 0) window.addRow();
             }
         }
 
@@ -843,7 +843,7 @@
 
         const itemsTableBody = document.getElementById('items-table-body');
 
-        const calculateTotal = () => {
+        window.calculateTotal = () => {
             let subtotal = 0;
             document.querySelectorAll('.item-amount').forEach(el => {
                 subtotal += parseFloat(el.innerText.replace(/[^0-9.-]+/g,"")) || 0;
@@ -863,35 +863,41 @@
             newRow.innerHTML = `
                 <td class="p-3 align-top"><div class="flex flex-col gap-1"><span contenteditable="true" class="item-desc editable w-full block font-medium text-gray-800" data-placeholder="Description">${desc}</span></div></td>
                 <td class="p-3 align-top text-right"><span contenteditable="true" class="item-amount editable w-full block text-right font-mono text-lg text-gray-700">${price}</span></td>
-                <td class="p-3 text-center no-print align-middle"><button onclick="deleteRow(this)" class="delete-row text-red-400 hover:text-red-600 font-bold p-1 rounded hover:bg-red-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                <td class="p-3 text-center no-print align-middle"><button onclick="window.deleteRow(this)" class="delete-row text-red-400 hover:text-red-600 font-bold p-1 rounded hover:bg-red-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
             `;
             tbody.appendChild(newRow);
             lucide.createIcons();
             
             const amountCell = newRow.querySelector('.item-amount');
             const descCell = newRow.querySelector('.item-desc');
-            [amountCell, descCell].forEach(cell => cell.addEventListener('input', calculateTotal));
+            [amountCell, descCell].forEach(cell => cell.addEventListener('input', window.calculateTotal));
             amountCell.addEventListener('blur', (e) => {
                 const val = parseFloat(e.target.innerText.replace(/[^0-9.-]+/g,"")) || 0;
                 e.target.innerText = val.toFixed(3);
-                calculateTotal();
+                window.calculateTotal();
             });
             descCell.addEventListener('focus', function() { if (this.innerText.includes("DHAKA TO SALALAH")) this.innerText = ""; });
-            calculateTotal();
+            window.calculateTotal();
         };
         
-        window.deleteRow = (btn) => { btn.closest('tr').remove(); calculateTotal(); };
+        window.deleteRow = (btn) => { btn.closest('tr').remove(); window.calculateTotal(); };
 
         function showMessage(text, type = 'success') {
             const msg = document.getElementById('system-message');
-            if(!msg) return;
+            // If no system message container exists (it might have been removed in earlier steps), fallback to alert or create one.
+            // For now, create a temporary toast if not found.
+            if(!msg) {
+                // Simplified feedback
+                console.log(text);
+                return;
+            }
             msg.textContent = text;
             msg.className = type === 'error' ? 'text-red-500 font-bold ml-4 hidden' : 'text-sm font-bold text-blue-600 ml-4';
             msg.classList.remove('hidden');
             setTimeout(() => { msg.classList.add('hidden'); }, 3000);
         }
 
-        function saveInvoice() {
+        window.saveInvoice = function() {
             if(!invoiceNumberElement) return;
             const id = parseInt(invoiceNumberElement.textContent, 10);
             const dateStr = document.getElementById('invoice-date').innerText;
@@ -947,14 +953,14 @@
                     invoiceId: id
                 });
             }
-            showMessage(`Invoice #${id} Saved & Added to Ledger!`);
+            alert(`Invoice #${id} Saved & Added to Ledger!`);
         }
 
-        function searchInvoice() {
+        window.searchInvoice = function() {
             const term = document.getElementById('search-input').value;
-            if (!term) return showMessage('Enter a number', 'error');
+            if (!term) return alert('Enter a number');
             const dataStr = localStorage.getItem(STORAGE_PREFIX + parseInt(term, 10));
-            if (!dataStr) return showMessage('Not Found', 'error');
+            if (!dataStr) return alert('Invoice Not Found');
             
             try {
                 const data = JSON.parse(dataStr);
@@ -964,53 +970,66 @@
                 document.getElementById('customer-phone').innerText = data.customerPhone || "Phone Number";
                 
                 const paidEl = document.getElementById('paid-toggle');
-                if(paidEl) paidEl.checked = data.paid;
-                togglePaidStamp();
+                if(paidEl) {
+                    paidEl.checked = data.paid;
+                    window.togglePaidStamp();
+                }
                 
                 const tbody = document.getElementById('items-table-body');
                 if(tbody) {
-                    tbody.innerHTML = '';
+                    tbody.innerHTML = ''; // Clear existing rows
                     if(data.items && data.items.length > 0) {
-                         data.items.forEach(item => addRow(item.desc, item.amount));
+                         data.items.forEach(item => window.addRow(item.desc, item.amount));
                     } else {
-                         addRow();
+                         window.addRow();
                     }
                 }
-                showMessage(`Invoice #${term} Loaded`);
+                // alert(`Invoice #${term} Loaded`);
             } catch(e) {
-                showMessage("Error loading invoice", 'error');
+                alert("Error loading invoice data");
+                console.error(e);
             }
         }
+        
+        window.resetSearch = function() {
+            document.getElementById('search-input').value = '';
+            window.generateNewInvoice();
+        }
 
-        function generateNewInvoice() {
+        window.generateNewInvoice = function() {
             let lastNum = localStorage.getItem(STORAGE_KEY_COUNTER) || 9876;
             setInvoiceNumberDisplay(parseInt(lastNum, 10) + 1);
             resetInvoiceDate(); 
             document.getElementById('customer-name').innerText = "Customer Name";
             document.getElementById('customer-phone').innerText = "Phone Number";
             const paidEl = document.getElementById('paid-toggle');
-            if(paidEl) paidEl.checked = false;
-            togglePaidStamp();
+            if(paidEl) {
+                paidEl.checked = false;
+                window.togglePaidStamp();
+            }
             document.getElementById('search-input').value = '';
             
             const tbody = document.getElementById('items-table-body');
             if(tbody) tbody.innerHTML = '';
             
-            addRow("DHAKA TO SALALAH", "0.000");
-            showMessage('New Invoice Created');
+            window.addRow("DHAKA TO SALALAH", "0.000");
         }
 
-        function togglePaidStamp() {
+        window.togglePaidStamp = function() {
             const paidEl = document.getElementById('paid-toggle');
             const stamp = document.getElementById('paid-watermark');
             if (paidEl && paidEl.checked) {
-                if(stamp) stamp.classList.add('is-visible');
+                if(stamp) {
+                    stamp.classList.add('is-visible');
+                    stamp.style.display = 'block';
+                }
             } else {
-                if(stamp) stamp.classList.remove('is-visible');
+                if(stamp) {
+                    stamp.classList.remove('is-visible');
+                    stamp.style.display = 'none';
+                }
             }
         }
-        const paidToggle = document.getElementById('paid-toggle');
-        if(paidToggle) paidToggle.addEventListener('change', togglePaidStamp);
 
         // --- LEDGER LOGIC ---
         function getHisabData() {
@@ -1115,8 +1134,8 @@
             if (data.pnr) desc += ` (PNR: ${data.pnr})`;
             if (data.flight_date) desc += ` - Travel Date: ${data.flight_date}`;
 
-            addRow(desc, data.sell.toFixed(3));
-            showMessage("Invoice Generated from Ledger!");
+            window.addRow(desc, data.sell.toFixed(3));
+            alert("Invoice Generated from Ledger!");
         }
 
         function editRow(id) {
@@ -1227,6 +1246,7 @@
                         <td class="text-xs text-center">${item.phone || '-'}</td>
                         <td class="text-right text-orange-600 font-bold bg-orange-50">${(item.due || 0).toFixed(3)}</td>
                         <td class="text-center no-print flex gap-1 justify-center items-center h-full">
+                             <button onclick="addToSalamCheckin(${item.id})" class="text-green-500 hover:text-green-700 p-1" title="Add to Check-in"><i data-lucide="user-check" class="w-3 h-3"></i></button>
                             <button onclick="generateInvoiceFromLedger(${item.id})" class="text-blue-500 hover:text-blue-700 p-1" title="Generate Invoice"><i data-lucide="file-text" class="w-3 h-3"></i></button>
                             <button onclick="deleteHisabEntry(${item.id})" class="text-gray-400 hover:text-red-500 p-1" title="Delete"><i data-lucide="x" class="w-3 h-3"></i></button>
                         </td>
@@ -1458,10 +1478,12 @@
 
                 data[index][field] = value;
                 
+                // Auto-set Payment Date when marked Paid
                 if(field === 'status' && value === 'Paid' && !data[index].paymentDate) {
                     data[index].paymentDate = new Date().toISOString().split('T')[0];
                 }
-                if(field === 'status' && value === 'Pending') {
+                // Clear Payment Date if NOT Paid
+                if(field === 'status' && (value === 'Pending' || value === 'Urgent')) {
                     data[index].paymentDate = '';
                 }
 
@@ -1907,7 +1929,9 @@
                     
                     alert('Data Replaced Successfully!');
                     location.reload();
-                } catch(e) { alert('Invalid File'); }
+                } catch(e) { 
+                    alert('Invalid File Format. Please select a valid backup JSON.'); 
+                }
             };
             reader.readAsText(file);
         };
@@ -2100,6 +2124,33 @@
             const container = document.getElementById('salam-history-container');
             container.classList.toggle('hidden');
         }
+        
+        window.addToSalamCheckin = function(id) {
+            event.stopPropagation();
+            const ledger = getHisabData();
+            const item = ledger.find(i => i.id === id);
+            
+            if(!item) return;
+            
+            const pnr = item.pnr;
+            const name = item.name;
+            const date = item.flight_date; // Use flight date for check-in reminder
+            
+            if(!pnr || !name || !date) {
+                alert("Cannot add to Check-in: Missing PNR, Name or Flight Date.");
+                return;
+            }
+            
+            const reminders = getSalamReminders();
+            // Optional: Check duplicates
+            // const exists = reminders.some(r => r.pnr === pnr && r.name === name);
+            // if(exists) { alert("Already in check-in list"); return; }
+            
+            reminders.push({ id: Date.now(), pnr, name, date });
+            localStorage.setItem(STORAGE_SALAM, JSON.stringify(reminders));
+            
+            alert(`Added ${name} to SalamAir Check-in Tracker!`);
+        };
     </script>
 </body>
 </html>
