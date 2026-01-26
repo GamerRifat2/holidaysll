@@ -2,14 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Holiday Travels - Management System</title>
+    
+    <!-- PWA Settings -->
+    <meta name="theme-color" content="#111827">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Holiday App">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; transition: background-color 0.3s, color 0.3s; }
+        /* Base & PWA Fixes */
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; transition: background-color 0.3s, color 0.3s; overscroll-behavior-y: none; }
         .arabic-text { font-family: 'Cairo', sans-serif; direction: rtl; }
         
         /* Dark Mode Styles */
@@ -141,8 +151,9 @@
         }
     </style>
 </head>
-<body class="text-gray-800">
+<body class="text-gray-800 pb-safe">
 
+    <!-- PASSWORD SCREEN -->
     <div id="login-screen" class="fixed inset-0 bg-gray-100 z-[9999] flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center border border-gray-200">
             <div class="mb-6 flex justify-center">
@@ -156,8 +167,10 @@
         </div>
     </div>
 
+    <!-- MAIN APP CONTAINER -->
     <div class="max-w-[290mm] mx-auto mt-6 px-4 mb-4"> 
         
+        <!-- GLOBAL HEADER -->
         <div id="global-header" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
                 <img id="header-logo-img" src="LOGO.png" alt="Holiday Travels" class="h-12 w-auto object-contain">
@@ -177,7 +190,8 @@
             </div>
         </div>
 
-        <div class="tabs-nav flex gap-2 mb-6 bg-white p-2 rounded-xl shadow-sm border border-gray-200 no-print max-w-[210mm] mx-auto overflow-x-auto">
+        <!-- NAVIGATION TABS -->
+        <div class="tabs-nav flex gap-2 mb-6 bg-white p-2 rounded-xl shadow-sm border border-gray-200 no-print max-w-[210mm] mx-auto overflow-x-auto touch-pan-x">
             <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md">
                 <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Dashboard
             </button>
@@ -198,6 +212,7 @@
             </button>
         </div>
 
+        <!-- TAB 1: DASHBOARD -->
         <div id="tab-dashboard" class="tab-content active">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
                 <div class="p-6 bg-gray-50 border-b border-gray-200">
@@ -205,8 +220,10 @@
                     <p class="text-sm text-gray-500">Yearly Performance Overview</p>
                 </div>
 
+                <!-- NEW: URGENT CHECK-IN ALERTS -->
                 <div id="dashboard-alerts" class="p-6 pb-0 hidden">
-                    </div>
+                    <!-- Injected via JS -->
+                </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white">
                     <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl border border-green-200 shadow-sm">
@@ -252,6 +269,7 @@
             </div>
         </div>
 
+        <!-- TAB 2: TRAVEL LEDGER (HISAB) -->
         <div id="tab-hisab" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="p-4 border-b border-gray-100 bg-gray-50 no-print">
@@ -280,6 +298,7 @@
                         <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">PHONE</label><input type="text" id="h-phone" placeholder="968..." class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
                         <div class="col-span-1"><label class="block text-[10px] font-bold text-red-600 mb-1">NET (COST)</label><input type="number" step="0.001" id="h-net" placeholder="0.000" class="w-full p-1.5 border border-red-200 rounded text-xs focus:border-red-500" required></div>
                         <div class="col-span-1"><label class="block text-[10px] font-bold text-green-600 mb-1">SELL (SALE)</label><input type="number" step="0.001" id="h-sell" placeholder="0.000" class="w-full p-1.5 border border-green-200 rounded text-xs focus:border-green-500" required></div>
+                        <!-- Replaced DUE with REMARK -->
                         <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">REMARK</label><input type="text" id="h-remark" placeholder="Details..." class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
                         <div class="col-span-1 md:col-span-1 flex gap-1">
                             <button type="submit" id="btn-add-update" class="flex-grow bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700 text-xs h-[30px] mt-4 shadow-sm transition-colors">ADD</button>
@@ -297,7 +316,8 @@
                         <div class="p-2 border-r border-gray-300 text-red-700">Total Net (Cost): <span id="tot-net">0.000</span></div>
                         <div class="p-2 border-r border-gray-300 text-green-700">Total Sell: <span id="tot-sell">0.000</span></div>
                         <div class="p-2 text-blue-800">Total Profit: <span id="tot-profit">0.000</span></div>
-                        </div>
+                        <!-- Removed Total Due from Header -->
+                    </div>
                     <div class="overflow-x-auto">
                         <table class="excel-table">
                             <thead>
@@ -312,9 +332,11 @@
             </div>
         </div>
 
+        <!-- TAB 3: NOTES & CHECK-IN -->
         <div id="tab-notes" class="tab-content">
              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[290mm] mx-auto">
                  
+                 <!-- SECTION 1: GENERAL TASKS -->
                  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-fit">
                     <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="clipboard-list" class="text-indigo-600"></i> Tasks & Notes</h2>
@@ -325,10 +347,12 @@
                             <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-indigo-700">Add</button>
                         </form>
                         <ul id="notes-list" class="space-y-2 max-h-[400px] overflow-y-auto">
-                            </ul>
+                            <!-- Notes inserted here -->
+                        </ul>
                     </div>
                  </div>
 
+                 <!-- SECTION 2: SALAMAIR CHECK-IN TRACKER -->
                  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="plane" class="text-green-600"></i> SalamAir Check-in Tracker</h2>
@@ -357,6 +381,7 @@
                         </form>
                     </div>
                     
+                    <!-- Active Reminders -->
                     <div class="p-0">
                          <table class="excel-table w-full">
                             <thead>
@@ -373,6 +398,7 @@
                         <div id="salam-empty" class="text-center py-8 text-gray-400 text-xs italic">No pending check-ins.</div>
                     </div>
 
+                    <!-- History (Hidden by default) -->
                     <div id="salam-history-container" class="hidden border-t border-gray-200 mt-4">
                         <div class="p-2 bg-gray-100 text-xs font-bold text-gray-600 text-center uppercase tracking-wide">Check-in History</div>
                         <table class="excel-table w-full opacity-60">
@@ -384,9 +410,11 @@
              </div>
         </div>
 
+        <!-- TAB 4: DUE & BANKING TRACKER -->
         <div id="tab-due" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
                 
+                <!-- PRINT HEADER (Hidden on Screen, Visible on Print) -->
                 <div class="print-header hidden">
                      <img src="LOGO.png" alt="Logo" class="h-24 w-auto object-contain">
                      <div class="company-details text-right">
@@ -396,6 +424,8 @@
                         <p class="text-xs text-gray-600 mt-1"><strong>Phone:</strong> 78594007</p>
                      </div>
                 </div>
+                <!-- END PRINT HEADER -->
+
                 <div class="p-6 bg-gray-50 border-b border-gray-200 flex flex-col gap-4 no-print">
                     <div class="flex justify-between items-center">
                         <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -407,6 +437,7 @@
                         </div>
                     </div>
                     
+                    <!-- View Toggle -->
                     <div class="flex justify-center">
                         <div class="bg-gray-200 p-1 rounded-lg flex gap-1">
                             <button onclick="setDueView('active')" id="btn-due-active" class="px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all">Active / Pending</button>
@@ -415,6 +446,7 @@
                     </div>
                 </div>
 
+                <!-- Stats (Modified for Print to look like Summary Box) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 bg-white">
                     <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
                         <p class="text-xs font-bold text-blue-600 uppercase">Customer Due (Receivable)</p>
@@ -435,6 +467,7 @@
                     </div>
                 </div>
 
+                <!-- ACTIVE VIEW -->
                 <div id="due-active-view" class="grid grid-cols-1 gap-6 p-6">
                     <div>
                         <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="arrow-down-left" class="text-blue-500 w-4 h-4"></i> Customer Dues (Receivables)</h3>
@@ -471,6 +504,7 @@
                     </div>
                 </div>
 
+                <!-- HISTORY VIEW (Hidden by default) -->
                 <div id="due-history-view" class="hidden p-6">
                     <div class="mb-8">
                         <h3 class="font-bold text-gray-700 mb-2 border-b pb-1 flex items-center gap-2"><i data-lucide="history" class="text-gray-500 w-4 h-4"></i> Completed / Paid Dues History</h3>
@@ -503,8 +537,10 @@
             </div>
         </div>
         
+        <!-- TAB 5: EXPENSE CALCULATOR (NEW) -->
         <div id="tab-expense" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
+                <!-- Expense Header -->
                 <div class="p-6 bg-gray-50 border-b border-gray-200 flex justify-between items-center no-print">
                     <div class="flex items-center gap-2">
                         <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><i data-lucide="calculator" class="text-purple-600"></i> Expense Calculator</h2>
@@ -517,6 +553,7 @@
                     </div>
                 </div>
 
+                <!-- Expense Stats -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white">
                     <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
                         <p class="text-xs font-bold text-blue-600 uppercase">Office Expenses</p>
@@ -532,6 +569,7 @@
                     </div>
                 </div>
 
+                <!-- Add Expense Form -->
                 <div class="px-6 py-4 bg-white border-b border-gray-200 no-print">
                     <form onsubmit="event.preventDefault(); addExpenseEntry();" class="flex flex-wrap gap-2 items-end">
                          <div class="w-36">
@@ -557,6 +595,7 @@
                     </form>
                 </div>
 
+                <!-- Expense Table -->
                 <div class="p-6 bg-white min-h-[300px]">
                     <table class="excel-table">
                         <thead>
@@ -574,7 +613,9 @@
             </div>
         </div>
 
+        <!-- TAB 5: INVOICE GENERATOR -->
         <div id="tab-invoice" class="tab-content">
+            <!-- Controls -->
             <div class="controls bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-4 justify-between items-center mb-6 max-w-[210mm] mx-auto">
                 <div class="flex items-center gap-2 flex-grow max-w-md">
                     <input type="number" id="search-input" placeholder="Search Invoice No" class="flex-grow p-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:outline-none text-sm">
@@ -594,6 +635,7 @@
                 </div>
             </div>
 
+            <!-- INVOICE PAPER -->
             <div class="invoice-paper" id="invoice-view">
                 <div id="paid-watermark" class="paid-seal"><div class="text-5xl font-black uppercase tracking-wider">PAID</div><div class="text-3xl font-bold arabic-text mt-0">مدفوع</div></div>
                 
@@ -678,6 +720,17 @@
     </div>
 
     <script>
+        // PWA SERVICE WORKER REGISTRATION
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW Registered!', reg.scope))
+                    .catch(err => console.log('SW Failed', err));
+            });
+        }
+    </script>
+
+    <script>
         const STORAGE_PREFIX = 'holiday_inv_';
         const STORAGE_KEY_COUNTER = 'holidayTravelsInvoiceNum';
         const STORAGE_HISAB = 'holiday_ledger_data';
@@ -731,10 +784,6 @@
             passInput.focus();
         }
 
-        // --- LOGO UPLOADER ---
-        // Removed click handler as per user request to remove upload feature
-        // Code below just checks if custom logo exists to display it if needed, but primary is LOGO.png
-        
         // --- TABS ---
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -775,14 +824,38 @@
         setupAutoClear('customer-name', 'Customer Name');
         setupAutoClear('customer-phone', 'Phone Number');
 
+        // --- NEW INVOICE ID LOGIC ---
+        function getTodayPrefix() {
+            const today = new Date();
+            const yy = String(today.getFullYear()).slice(-2);
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            return `${yy}${mm}${dd}`;
+        }
+
+        function calculateNextInvoiceId() {
+            const prefix = getTodayPrefix();
+            // Get raw string to preserve format
+            const lastId = localStorage.getItem(STORAGE_KEY_COUNTER); 
+            
+            // Check if last stored ID belongs to today
+            if (lastId && String(lastId).startsWith(prefix)) {
+                const suffix = String(lastId).substring(prefix.length);
+                const nextSeq = parseInt(suffix, 10) + 1;
+                return `${prefix}${nextSeq}`;
+            } else {
+                // New day or first run with new format
+                return `${prefix}1`;
+            }
+        }
+
         function setInvoiceNumberDisplay(num) { 
-            if(invoiceNumberElement) invoiceNumberElement.textContent = String(num).padStart(4, '0'); 
+            if(invoiceNumberElement) invoiceNumberElement.textContent = num; 
         }
         
         function initializeInvoiceNumber() {
-            let lastNum = localStorage.getItem(STORAGE_KEY_COUNTER);
-            if (!lastNum) { lastNum = 9876; localStorage.setItem(STORAGE_KEY_COUNTER, lastNum); }
-            setInvoiceNumberDisplay(parseInt(lastNum, 10) + 1);
+            const nextId = calculateNextInvoiceId();
+            setInvoiceNumberDisplay(nextId);
         }
 
         function setTodayDate() {
@@ -859,13 +932,7 @@
 
         function showMessage(text, type = 'success') {
             const msg = document.getElementById('system-message');
-            // If no system message container exists (it might have been removed in earlier steps), fallback to alert or create one.
-            // For now, create a temporary toast if not found.
-            if(!msg) {
-                // Simplified feedback
-                console.log(text);
-                return;
-            }
+            if(!msg) { console.log(text); return; }
             msg.textContent = text;
             msg.className = type === 'error' ? 'text-red-500 font-bold ml-4 hidden' : 'text-sm font-bold text-blue-600 ml-4';
             msg.classList.remove('hidden');
@@ -959,7 +1026,6 @@
                          window.addRow();
                     }
                 }
-                // alert(`Invoice #${term} Loaded`);
             } catch(e) {
                 alert("Error loading invoice data");
                 console.error(e);
@@ -972,8 +1038,8 @@
         }
 
         window.generateNewInvoice = function() {
-            let lastNum = localStorage.getItem(STORAGE_KEY_COUNTER) || 9876;
-            setInvoiceNumberDisplay(parseInt(lastNum, 10) + 1);
+            const nextId = calculateNextInvoiceId();
+            setInvoiceNumberDisplay(nextId);
             resetInvoiceDate(); 
             document.getElementById('customer-name').innerText = "Customer Name";
             document.getElementById('customer-phone').innerText = "Phone Number";
