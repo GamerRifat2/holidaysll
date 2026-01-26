@@ -11,8 +11,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Holiday App">
     <link rel="manifest" href="manifest.json">
-    <!-- Updated to use LOGO.png -->
     <link rel="apple-touch-icon" href="LOGO.png">
+    <!-- Standard Favicon -->
+    <link rel="icon" type="image/png" href="LOGO.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
@@ -89,9 +90,9 @@
         }
         .paid-seal.is-visible { opacity: 0.4 !important; display: block !important; }
 
-        /* Excel-like Table Styles */
-        .excel-table { border-collapse: collapse; width: 100%; font-size: 11px; } 
-        .excel-table th, .excel-table td { border: 1px solid #d1d5db; padding: 6px 4px; }
+        /* Excel-like Table Styles - INCREASED SIZE FOR PC */
+        .excel-table { border-collapse: collapse; width: 100%; font-size: 14px; } 
+        .excel-table th, .excel-table td { border: 1px solid #d1d5db; padding: 8px 6px; }
         .excel-table th { background-color: #f3f4f6; font-weight: 700; text-align: center; white-space: nowrap; }
         .excel-table tr:nth-child(even) { background-color: #f9fafb; }
         .excel-table tr:hover { background-color: #eff6ff; cursor: pointer; }
@@ -291,19 +292,19 @@
                 <div class="px-6 py-4 bg-white border-b border-gray-200 no-print">
                     <form onsubmit="event.preventDefault(); addHisabEntry();" class="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-2 items-end">
                         <input type="hidden" id="h-edit-id"> 
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">DATE</label><input type="date" id="h-date" class="w-full p-1.5 border border-gray-300 rounded text-xs bg-yellow-50" title="Leave empty for Today's Date"></div>
-                        <div class="col-span-1 md:col-span-2"><label class="block text-[10px] font-bold text-gray-500 mb-1">NAME</label><input type="text" id="h-name" placeholder="Passenger Name" class="w-full p-1.5 border border-gray-300 rounded text-xs" required></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">PNR</label><input type="text" id="h-pnr" placeholder="PNR" class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">FLIGHT DATE</label><input type="date" id="h-fdate" class="w-full p-1.5 border border-gray-300 rounded text-xs" title="Leave empty to use Entry Date"></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">SECTOR</label><input type="text" id="h-sector" placeholder="DXB-MCT" class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">PHONE</label><input type="text" id="h-phone" placeholder="968..." class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-red-600 mb-1">NET (COST)</label><input type="number" step="0.001" id="h-net" placeholder="0.000" class="w-full p-1.5 border border-red-200 rounded text-xs focus:border-red-500" required></div>
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-green-600 mb-1">SELL (SALE)</label><input type="number" step="0.001" id="h-sell" placeholder="0.000" class="w-full p-1.5 border border-green-200 rounded text-xs focus:border-green-500" required></div>
+                        <div class="col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">DATE</label><input type="date" id="h-date" class="w-full p-2 border border-gray-300 rounded text-sm bg-yellow-50" title="Leave empty for Today's Date"></div>
+                        <div class="col-span-1 md:col-span-2"><label class="block text-xs font-bold text-gray-500 mb-1">NAME</label><input type="text" id="h-name" placeholder="Passenger Name" class="w-full p-2 border border-gray-300 rounded text-sm" required></div>
+                        <div class="col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">PNR</label><input type="text" id="h-pnr" placeholder="PNR" class="w-full p-2 border border-gray-300 rounded text-sm"></div>
+                        <div class="col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">FLIGHT DATE</label><input type="date" id="h-fdate" class="w-full p-2 border border-gray-300 rounded text-sm" title="Leave empty to use Entry Date"></div>
+                        <div class="col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">SECTOR</label><input type="text" id="h-sector" placeholder="DXB-MCT" class="w-full p-2 border border-gray-300 rounded text-sm"></div>
+                        <div class="col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">PHONE</label><input type="text" id="h-phone" placeholder="968..." class="w-full p-2 border border-gray-300 rounded text-sm"></div>
+                        <div class="col-span-1"><label class="block text-xs font-bold text-red-600 mb-1">NET (COST)</label><input type="number" step="0.001" id="h-net" placeholder="0.000" class="w-full p-2 border border-red-200 rounded text-sm focus:border-red-500" required></div>
+                        <div class="col-span-1"><label class="block text-xs font-bold text-green-600 mb-1">SELL (SALE)</label><input type="number" step="0.001" id="h-sell" placeholder="0.000" class="w-full p-2 border border-green-200 rounded text-sm focus:border-green-500" required></div>
                         <!-- Replaced DUE with REMARK -->
-                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-500 mb-1">REMARK</label><input type="text" id="h-remark" placeholder="Details..." class="w-full p-1.5 border border-gray-300 rounded text-xs"></div>
+                        <div class="col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">REMARK</label><input type="text" id="h-remark" placeholder="Details..." class="w-full p-2 border border-gray-300 rounded text-sm"></div>
                         <div class="col-span-1 md:col-span-1 flex gap-1">
-                            <button type="submit" id="btn-add-update" class="flex-grow bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700 text-xs h-[30px] mt-4 shadow-sm transition-colors">ADD</button>
-                            <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="hidden bg-gray-200 text-gray-600 p-1.5 rounded font-bold hover:bg-gray-300 text-xs h-[30px] mt-4 w-8 flex items-center justify-center"><i data-lucide="x" class="w-3 h-3"></i></button>
+                            <button type="submit" id="btn-add-update" class="flex-grow bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700 text-xs h-[38px] mt-6 shadow-sm transition-colors">ADD</button>
+                            <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="hidden bg-gray-200 text-gray-600 p-1.5 rounded font-bold hover:bg-gray-300 text-xs h-[38px] mt-6 w-8 flex items-center justify-center"><i data-lucide="x" class="w-3 h-3"></i></button>
                         </div>
                     </form>
                 </div>
@@ -313,7 +314,7 @@
                         <h1 class="text-xl font-bold text-gray-800 uppercase tracking-widest">Travel Agency Ledger</h1>
                         <p class="text-sm text-gray-500" id="sheet-header-date">January 2026</p>
                     </div>
-                    <div class="grid grid-cols-3 gap-0 mb-4 border border-gray-300 text-center text-xs font-bold bg-gray-50">
+                    <div class="grid grid-cols-3 gap-0 mb-4 border border-gray-300 text-center text-sm font-bold bg-gray-50">
                         <div class="p-2 border-r border-gray-300 text-red-700">Total Net (Cost): <span id="tot-net">0.000</span></div>
                         <div class="p-2 border-r border-gray-300 text-green-700">Total Sell: <span id="tot-sell">0.000</span></div>
                         <div class="p-2 text-blue-800">Total Profit: <span id="tot-profit">0.000</span></div>
@@ -363,19 +364,19 @@
                         <form onsubmit="event.preventDefault(); addSalamReminder();" class="flex flex-wrap gap-2 items-end">
                             <input type="hidden" id="salam-edit-id">
                             <div class="flex-grow min-w-[100px]">
-                                <label class="block text-[10px] font-bold text-gray-500 mb-1">PNR</label>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">PNR</label>
                                 <input type="text" id="salam-pnr" class="w-full p-2 border border-gray-300 rounded text-sm font-mono" placeholder="ABC123" required>
                             </div>
                             <div class="flex-grow min-w-[150px]">
-                                <label class="block text-[10px] font-bold text-gray-500 mb-1">Name</label>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Name</label>
                                 <input type="text" id="salam-name" class="w-full p-2 border border-gray-300 rounded text-sm" placeholder="Passenger Name" required>
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-500 mb-1">Flight Date</label>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Flight Date</label>
                                 <input type="date" id="salam-date" class="w-full p-2 border border-gray-300 rounded text-sm" required>
                             </div>
                              <div class="flex-grow w-full">
-                                <label class="block text-[10px] font-bold text-gray-500 mb-1">Remark (Optional)</label>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Remark (Optional)</label>
                                 <input type="text" id="salam-remark" class="w-full p-2 border border-gray-300 rounded text-sm" placeholder="Seat, Bags, etc...">
                             </div>
                             <button type="submit" id="btn-salam-add" class="w-full bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700 h-[38px] mt-2">Track Check-in</button>
@@ -1276,16 +1277,16 @@
                     const fDateDisplay = item.flight_date ? new Date(item.flight_date).toLocaleDateString('en-GB', {day: 'numeric', month: 'short'}) : '-';
 
                     row.innerHTML = `
-                        <td class="text-center">${displayDate}</td>
-                        <td class="font-bold text-gray-700" title="${item.name}">${item.name}</td>
-                        <td class="text-center text-xs font-mono">${item.pnr || '-'}</td>
-                        <td class="text-center text-xs">${fDateDisplay}</td>
-                        <td class="text-right text-red-600">${item.net.toFixed(3)}</td>
-                        <td class="text-right text-green-700 font-bold">${item.sell.toFixed(3)}</td>
-                        <td class="text-right text-blue-800 bg-blue-50 font-bold">${profit.toFixed(3)}</td>
-                        <td class="text-xs text-center">${item.sector || '-'}</td>
-                        <td class="text-xs text-center">${item.phone || '-'}</td>
-                        <td class="text-xs text-center text-gray-500 italic">${item.remark || '-'}</td>
+                        <td class="text-center text-sm">${displayDate}</td>
+                        <td class="font-bold text-gray-700 text-sm" title="${item.name}">${item.name}</td>
+                        <td class="text-center text-sm font-mono">${item.pnr || '-'}</td>
+                        <td class="text-center text-sm">${fDateDisplay}</td>
+                        <td class="text-right text-red-600 text-sm">${item.net.toFixed(3)}</td>
+                        <td class="text-right text-green-700 font-bold text-sm">${item.sell.toFixed(3)}</td>
+                        <td class="text-right text-blue-800 bg-blue-50 font-bold text-sm">${profit.toFixed(3)}</td>
+                        <td class="text-sm text-center">${item.sector || '-'}</td>
+                        <td class="text-sm text-center">${item.phone || '-'}</td>
+                        <td class="text-sm text-center text-gray-500 italic">${item.remark || '-'}</td>
                         <td class="text-center no-print flex gap-1 justify-center items-center h-full">
                              <button onclick="addToSalamCheckin(${item.id})" class="text-green-500 hover:text-green-700 p-1" title="Add to Check-in"><i data-lucide="user-check" class="w-3 h-3"></i></button>
                             <button onclick="generateInvoiceFromLedger(${item.id})" class="text-blue-500 hover:text-blue-700 p-1" title="Generate Invoice"><i data-lucide="file-text" class="w-3 h-3"></i></button>
@@ -1395,10 +1396,10 @@
                     const badgeClass = item.type === 'Office' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
 
                     row.innerHTML = `
-                        <td class="text-center">${displayDate}</td>
-                        <td>${item.desc}</td>
+                        <td class="text-center text-sm">${displayDate}</td>
+                        <td class="text-sm">${item.desc}</td>
                         <td class="text-center"><span class="px-2 py-1 rounded text-xs font-bold ${badgeClass}">${item.type}</span></td>
-                        <td class="text-right font-mono">${item.amount.toFixed(3)}</td>
+                        <td class="text-right font-mono text-sm">${item.amount.toFixed(3)}</td>
                         <td class="text-center no-print"><button onclick="deleteExpenseEntry(${item.id})" class="text-gray-400 hover:text-red-500"><i data-lucide="x" class="w-3 h-3"></i></button></td>
                     `;
                     tbody.appendChild(row);
@@ -1642,7 +1643,7 @@
             // Conditional HTML for Phone column (Only for Customer)
             let phoneHtml = '';
             if (item.type === 'customer') {
-                phoneHtml = `<td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.phone || ''}" placeholder="968..." onchange="updateDueItem(${item.id}, 'phone', this.value)"></td>`;
+                phoneHtml = `<td><input type="text" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${item.phone || ''}" placeholder="968..." onchange="updateDueItem(${item.id}, 'phone', this.value)"></td>`;
             }
 
             // Fix for existing data showing "Name" or "0"
@@ -1652,9 +1653,9 @@
             // Notes vs Date logic based on type
             let dateOrNotes = '';
             if (item.type === 'customer') {
-                dateOrNotes = `<input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.notes || ''}" placeholder="Notes..." onchange="updateDueItem(${item.id}, 'notes', this.value)">`;
+                dateOrNotes = `<input type="text" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${item.notes || ''}" placeholder="Notes..." onchange="updateDueItem(${item.id}, 'notes', this.value)">`;
             } else {
-                dateOrNotes = `<input type="date" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)">`;
+                dateOrNotes = `<input type="date" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)">`;
             }
 
             // Style based on status
@@ -1663,19 +1664,19 @@
             if(item.status === 'Paid') statusColor = "text-green-600 font-bold";
 
             row.innerHTML = `
-                <td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${nameVal}" placeholder="Name" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
+                <td><input type="text" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${nameVal}" placeholder="Name" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
                 ${phoneHtml}
-                <td><input type="number" step="0.001" class="w-full p-1 border rounded bg-white text-gray-800 text-sm font-mono" value="${amtVal}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
+                <td><input type="number" step="0.001" class="w-full p-2 border rounded bg-white text-gray-800 text-sm font-mono" value="${amtVal}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
                 <td>${dateOrNotes}</td>
                 <td>
-                    <select class="w-full p-1 border rounded bg-white text-sm ${statusColor}" onchange="updateDueItem(${item.id}, 'status', this.value)">
+                    <select class="w-full p-2 border rounded bg-white text-sm ${statusColor}" onchange="updateDueItem(${item.id}, 'status', this.value)">
                         <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
                         <option value="Urgent" class="text-red-600 font-bold" ${item.status === 'Urgent' ? 'selected' : ''}>Urgent (ASAP)</option>
                         <option value="Partial" class="text-blue-600">Partial Pay</option>
                         <option value="Paid" class="text-green-600 font-bold" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
                     </select>
                 </td>
-                <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-2 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
             `;
             return row;
         }
@@ -1686,10 +1687,10 @@
             const amtVal = (item.amount === 0 || item.amount === '0') ? '' : item.amount;
 
             row.innerHTML = `
-                <td><input type="date" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
-                <td><input type="text" class="w-full p-1 border rounded bg-white text-gray-800 text-sm" value="${nameVal}" placeholder="Bank Name" onchange="updateDueItem(${item.id}, 'bankName', this.value)"></td>
-                <td><input type="number" step="0.001" class="w-full p-1 border rounded bg-white text-green-700 font-bold text-sm font-mono" value="${amtVal}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
-                <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                <td><input type="date" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
+                <td><input type="text" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${nameVal}" placeholder="Bank Name" onchange="updateDueItem(${item.id}, 'bankName', this.value)"></td>
+                <td><input type="number" step="0.001" class="w-full p-2 border rounded bg-white text-green-700 font-bold text-sm font-mono" value="${amtVal}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
+                <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-2 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
             `;
             return row;
         }
@@ -1710,12 +1711,12 @@
 
             row.innerHTML = `
                 <td class="text-center">${typeLabel}</td>
-                <td class="font-medium">${displayDetails}</td>
-                <td class="font-mono">${parseFloat(item.amount).toFixed(3)}</td>
+                <td class="font-medium text-sm">${displayDetails}</td>
+                <td class="font-mono text-sm">${parseFloat(item.amount).toFixed(3)}</td>
                 <td class="text-xs text-gray-500">${noteContent}</td>
-                <td><input type="date" class="w-full p-1 border rounded bg-gray-50 text-xs" value="${dateValue}" onchange="updateDueItem(${item.id}, 'paymentDate', this.value)"></td>
+                <td><input type="date" class="w-full p-2 border rounded bg-gray-50 text-xs" value="${dateValue}" onchange="updateDueItem(${item.id}, 'paymentDate', this.value)"></td>
                 <td>
-                    <select class="w-full p-1 border rounded bg-green-50 text-green-700 text-xs font-bold" onchange="updateDueItem(${item.id}, 'status', this.value)">
+                    <select class="w-full p-2 border rounded bg-green-50 text-green-700 text-xs font-bold" onchange="updateDueItem(${item.id}, 'status', this.value)">
                         <option value="Paid" selected>Paid</option>
                         <option value="Pending">Revert to Pending</option>
                     </select>
@@ -2207,10 +2208,10 @@
                     const row = document.createElement('tr');
                     row.className = rowClass;
                     row.innerHTML = `
-                        <td class="font-mono text-xs">${r.date}</td>
-                        <td class="font-bold font-mono">${r.pnr}</td>
-                        <td>${r.name}</td>
-                        <td class="text-xs text-gray-600 italic">${r.remark || '-'}</td>
+                        <td class="font-mono text-sm">${r.date}</td>
+                        <td class="font-bold font-mono text-sm">${r.pnr}</td>
+                        <td class="text-sm">${r.name}</td>
+                        <td class="text-sm text-gray-600 italic">${r.remark || '-'}</td>
                         <td class="text-center flex gap-1 justify-center items-center h-full pt-2">
                              <button onclick="editSalamReminder(${r.id})" class="text-blue-500 hover:text-blue-700 p-1" title="Edit"><i data-lucide="pencil" class="w-3 h-3"></i></button>
                              <button onclick="completeSalamReminder(${r.id})" ${btnDisabled ? 'disabled' : ''} class="${btnClass} px-2 py-1 rounded text-xs ml-1" title="Mark Check-in Done">Done</button>
