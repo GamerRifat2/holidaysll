@@ -213,10 +213,6 @@
             <button onclick="switchTab('invoice')" id="btn-tab-invoice" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
                 <i data-lucide="file-text" class="w-4 h-4"></i> Invoice
             </button>
-            <!-- RECYCLE BIN TAB -->
-            <button onclick="switchTab('trash')" id="btn-tab-trash" class="flex-1 min-w-[100px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-red-500 hover:bg-red-50 border border-red-100">
-                <i data-lucide="trash-2" class="w-4 h-4"></i> Bin
-            </button>
         </div>
 
         <!-- TAB 1: DASHBOARD -->
@@ -288,6 +284,8 @@
                             <input type="month" id="hisab-month-filter" class="p-1 border border-gray-300 rounded text-sm font-bold text-gray-800" onchange="loadHisab()">
                         </div>
                         <div class="flex gap-2">
+                             <!-- TICKETING TRASH BUTTON -->
+                             <button onclick="openTrash('hisab')" class="bg-red-100 text-red-600 px-3 py-2 rounded text-xs font-bold hover:bg-red-200 flex items-center gap-1"><i data-lucide="trash-2" class="w-3 h-3"></i> Bin</button>
                              <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-2 rounded text-xs font-bold hover:bg-gray-700 flex items-center gap-1"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
                              <button onclick="exportHisab('month')" class="bg-green-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-1"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Export Excel</button>
                         </div>
@@ -347,6 +345,8 @@
                  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-fit">
                     <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="clipboard-list" class="text-indigo-600"></i> Tasks & Notes</h2>
+                        <!-- NOTES TRASH BUTTON -->
+                        <button onclick="openTrash('notes')" class="text-red-400 hover:text-red-600 p-1" title="View Deleted Notes"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>
                     <div class="p-4">
                         <form onsubmit="event.preventDefault(); addNote();" class="flex gap-2 mb-4">
@@ -363,7 +363,11 @@
                  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="plane" class="text-green-600"></i> SalamAir Check-in Tracker</h2>
-                        <button onclick="toggleSalamHistory()" class="text-xs font-bold text-gray-500 hover:text-gray-700 underline">Show History</button>
+                        <div>
+                            <button onclick="toggleSalamHistory()" class="text-xs font-bold text-gray-500 hover:text-gray-700 underline mr-2">Show History</button>
+                            <!-- CHECK-IN TRASH BUTTON -->
+                            <button onclick="openTrash('salam')" class="text-red-400 hover:text-red-600 p-1" title="View Deleted Check-ins"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
                     </div>
                     <div class="p-4 border-b border-gray-100">
                         <form onsubmit="event.preventDefault(); addSalamReminder();" class="flex flex-wrap gap-2 items-end">
@@ -439,6 +443,8 @@
                             <i data-lucide="wallet" class="text-blue-600"></i> Due & Banking
                         </h2>
                         <div class="flex gap-2">
+                            <!-- DUE TRASH BUTTON -->
+                            <button onclick="openTrash('due')" class="bg-red-100 text-red-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-red-200"><i data-lucide="trash-2" class="w-3 h-3"></i> Bin</button>
                             <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
                         </div>
                     </div>
@@ -554,6 +560,8 @@
                         <input type="month" id="expense-month-filter" class="p-1 border border-gray-300 rounded text-sm font-bold text-gray-800" onchange="loadExpense()">
                     </div>
                     <div class="flex gap-2">
+                         <!-- EXPENSE TRASH BUTTON -->
+                         <button onclick="openTrash('expense')" class="bg-red-100 text-red-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-red-200"><i data-lucide="trash-2" class="w-3 h-3"></i> Bin</button>
                          <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
                          <button onclick="exportExpense()" class="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-1"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Export</button>
                     </div>
@@ -623,10 +631,13 @@
         <div id="tab-trash" class="tab-content">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
                 <div class="p-6 bg-red-50 border-b border-red-200 flex justify-between items-center">
-                    <h2 class="text-2xl font-bold text-red-800 flex items-center gap-2">
-                        <i data-lucide="trash-2" class="text-red-600"></i> Recycle Bin / History
-                    </h2>
-                    <p class="text-sm text-red-600">Items deleted from any module appear here.</p>
+                    <div>
+                        <h2 id="trash-title" class="text-2xl font-bold text-red-800 flex items-center gap-2">
+                            <i data-lucide="trash-2" class="text-red-600"></i> Recycle Bin
+                        </h2>
+                        <p class="text-sm text-red-600 mt-1">Deleted items are stored here safely.</p>
+                    </div>
+                    <button onclick="closeTrash()" class="bg-white text-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-100 border border-gray-300 shadow-sm">Back to App</button>
                 </div>
                 <div class="p-6">
                     <table class="excel-table w-full">
@@ -776,6 +787,7 @@
         const STORAGE_SALAM_HISTORY = 'holiday_salam_history';
         const STORAGE_TRASH = 'holiday_trash_data';
         let dueViewMode = 'active'; 
+        let currentTrashSource = null;
         
         lucide.createIcons();
 
@@ -831,18 +843,11 @@
                 btn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50";
             });
             
-            // Special styling for Trash Tab button
-            const trashBtn = document.getElementById('btn-tab-trash');
-            if (trashBtn) trashBtn.className = "flex-1 min-w-[100px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-red-500 hover:bg-red-50 border border-red-100";
-
             // Activate current button
             const currentBtn = document.getElementById(`btn-tab-${tabName}`);
             if(currentBtn) {
-                if (tabName === 'trash') {
-                    currentBtn.className = "flex-1 min-w-[100px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-red-600 text-white shadow-md";
-                } else {
-                    currentBtn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md";
-                }
+                // If it is the trash "tab" (which has no nav button now), don't try to style a null button
+                currentBtn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md";
             }
 
             if(tabName === 'hisab') loadHisab();
@@ -869,6 +874,28 @@
             item.deletedDate = new Date().toISOString();
             trash.push(item);
             localStorage.setItem(STORAGE_TRASH, JSON.stringify(trash));
+        }
+
+        function openTrash(source) {
+            currentTrashSource = source;
+            switchTab('trash');
+        }
+
+        function closeTrash() {
+            if (currentTrashSource) {
+                // Return to the tab associated with the source
+                const map = {
+                    'hisab': 'hisab',
+                    'notes': 'notes',
+                    'salam': 'notes',
+                    'due': 'due',
+                    'expense': 'expense'
+                };
+                switchTab(map[currentTrashSource] || 'dashboard');
+            } else {
+                switchTab('dashboard');
+            }
+            currentTrashSource = null;
         }
 
         function restoreTrashItem(id) {
@@ -927,58 +954,78 @@
 
         function loadTrash() {
             const tbody = document.getElementById('trash-table-body');
-            const trash = getTrashData();
+            let trash = getTrashData();
             tbody.innerHTML = '';
+
+            // FILTER
+            if (currentTrashSource) {
+                trash = trash.filter(item => item.deletedSource === currentTrashSource);
+                const titles = {
+                   'hisab': 'Deleted Ticketing Items',
+                   'notes': 'Deleted Notes',
+                   'salam': 'Deleted Check-ins',
+                   'due': 'Deleted Due/Bank Items',
+                   'expense': 'Deleted Expenses'
+                };
+                const titleEl = document.getElementById('trash-title');
+                if(titleEl) {
+                    titleEl.innerHTML = `<i data-lucide="trash-2" class="text-red-600"></i> ${titles[currentTrashSource] || 'Recycle Bin'}`;
+                }
+            } else {
+                // If accessed directly somehow, show all
+                const titleEl = document.getElementById('trash-title');
+                if(titleEl) titleEl.innerHTML = `<i data-lucide="trash-2" class="text-red-600"></i> Recycle Bin (All)`;
+            }
 
             if (trash.length === 0) {
                 document.getElementById('trash-empty').classList.remove('hidden');
-                return;
-            }
-            document.getElementById('trash-empty').classList.add('hidden');
-
-            // Sort by deleted date desc
-            trash.sort((a,b) => new Date(b.deletedDate) - new Date(a.deletedDate));
-
-            trash.forEach(item => {
-                const row = document.createElement('tr');
+            } else {
+                document.getElementById('trash-empty').classList.add('hidden');
                 
-                // Determine display details based on source
-                let details = '';
-                let amount = '-';
-                let sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-gray-200 text-gray-700 uppercase">${item.deletedSource}</span>`;
+                // Sort by deleted date desc
+                trash.sort((a,b) => new Date(b.deletedDate) - new Date(a.deletedDate));
 
-                if (item.deletedSource === 'hisab') {
-                    details = `${item.name} (${item.pnr || '-'}) - ${item.sector}`;
-                    amount = item.sell;
-                    sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700 uppercase">Ticketing</span>`;
-                } else if (item.deletedSource === 'notes') {
-                    details = item.text;
-                    sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-yellow-100 text-yellow-700 uppercase">Note</span>`;
-                } else if (item.deletedSource === 'salam') {
-                    details = `${item.name} (${item.pnr}) - Flight: ${item.date}`;
-                    sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700 uppercase">Check-in</span>`;
-                } else if (item.deletedSource === 'due') {
-                    details = `${item.type === 'bank' ? item.bankName : item.name} (${item.status})`;
-                    amount = item.amount;
-                    sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700 uppercase">Due/Bank</span>`;
-                } else if (item.deletedSource === 'expense') {
-                    details = `${item.desc} (${item.type})`;
-                    amount = item.amount;
-                    sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-700 uppercase">Expense</span>`;
-                }
+                trash.forEach(item => {
+                    const row = document.createElement('tr');
+                    
+                    // Determine display details based on source
+                    let details = '';
+                    let amount = '-';
+                    let sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-gray-200 text-gray-700 uppercase">${item.deletedSource}</span>`;
 
-                row.innerHTML = `
-                    <td class="text-center">${sourceLabel}</td>
-                    <td class="text-xs text-gray-500">${new Date(item.deletedDate).toLocaleString()}</td>
-                    <td class="font-medium text-sm text-gray-700">${details}</td>
-                    <td class="font-mono text-sm">${amount !== '-' ? parseFloat(amount).toFixed(3) : '-'}</td>
-                    <td class="text-center">
-                        <button onclick="restoreTrashItem(${item.id})" class="text-green-600 hover:text-green-800 font-bold text-xs mr-3"><i data-lucide="rotate-ccw" class="w-4 h-4 inline"></i> Restore</button>
-                        <button onclick="permanentDeleteTrashItem(${item.id})" class="text-red-500 hover:text-red-700 font-bold text-xs"><i data-lucide="trash-2" class="w-4 h-4 inline"></i> Delete</button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
+                    if (item.deletedSource === 'hisab') {
+                        details = `${item.name} (${item.pnr || '-'}) - ${item.sector}`;
+                        amount = item.sell;
+                        sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700 uppercase">Ticketing</span>`;
+                    } else if (item.deletedSource === 'notes') {
+                        details = item.text;
+                        sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-yellow-100 text-yellow-700 uppercase">Note</span>`;
+                    } else if (item.deletedSource === 'salam') {
+                        details = `${item.name} (${item.pnr}) - Flight: ${item.date}`;
+                        sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700 uppercase">Check-in</span>`;
+                    } else if (item.deletedSource === 'due') {
+                        details = `${item.type === 'bank' ? item.bankName : item.name} (${item.status})`;
+                        amount = item.amount;
+                        sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700 uppercase">Due/Bank</span>`;
+                    } else if (item.deletedSource === 'expense') {
+                        details = `${item.desc} (${item.type})`;
+                        amount = item.amount;
+                        sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-700 uppercase">Expense</span>`;
+                    }
+
+                    row.innerHTML = `
+                        <td class="text-center">${sourceLabel}</td>
+                        <td class="text-xs text-gray-500">${new Date(item.deletedDate).toLocaleString()}</td>
+                        <td class="font-medium text-sm text-gray-700">${details}</td>
+                        <td class="font-mono text-sm">${amount !== '-' ? parseFloat(amount).toFixed(3) : '-'}</td>
+                        <td class="text-center">
+                            <button onclick="restoreTrashItem(${item.id})" class="text-green-600 hover:text-green-800 font-bold text-xs mr-3"><i data-lucide="rotate-ccw" class="w-4 h-4 inline"></i> Restore</button>
+                            <button onclick="permanentDeleteTrashItem(${item.id})" class="text-red-500 hover:text-red-700 font-bold text-xs"><i data-lucide="trash-2" class="w-4 h-4 inline"></i> Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
             lucide.createIcons();
         }
 
