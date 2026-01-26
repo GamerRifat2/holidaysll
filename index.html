@@ -100,13 +100,27 @@
         .row-selected { background-color: #fff7ed !important; border-left: 3px solid #f97316; }
         body.dark .row-selected { background-color: rgba(249, 115, 22, 0.2) !important; }
         
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 50; display: none;
+            align-items: center; justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background: white; width: 90%; max-width: 800px; max-height: 85vh;
+            border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        body.dark .modal-content { background: #1f2937; color: #e5e7eb; border: 1px solid #374151; }
+
         .print-header { display: none; }
 
         /* Print Settings */
         @media print {
             @page { margin: 0; size: A4 portrait; } 
             body { background: white !important; color: black !important; margin: 0; padding: 0; }
-            .no-print, .controls, #login-screen, .tabs-nav, #global-header, .add-row-btn { display: none !important; }
+            .no-print, .controls, #login-screen, .tabs-nav, #global-header, .add-row-btn, .modal-overlay { display: none !important; }
             
             .tab-content { display: none !important; }
             .tab-content.active { display: block !important; }
@@ -120,7 +134,6 @@
             #tab-hisab.active { width: 100%; }
             #tab-expense.active { width: 100%; }
             #tab-notes.active { width: 100%; }
-            #tab-trash.active { width: 100%; }
             
             /* Due Tab Print Styling (Divided Statement Look) */
             #tab-due.active .print-header { display: flex !important; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
@@ -167,6 +180,39 @@
             <input type="password" id="password-input" placeholder="Passcode" class="w-full p-3 border border-gray-200 rounded-lg mb-4 text-center text-lg focus:ring-2 focus:ring-blue-500 outline-none">
             <button onclick="attemptLogin()" class="w-full bg-gray-900 text-white py-3 rounded-lg font-bold hover:bg-gray-800 transition-all shadow-lg">Login</button>
             <p id="login-error" class="text-red-500 text-sm mt-4 hidden font-medium">Incorrect Code</p>
+        </div>
+    </div>
+
+    <!-- GLOBAL LOG MODAL (POPUP) -->
+    <div id="log-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="p-4 bg-gray-100 border-b border-gray-200 flex justify-between items-center dark:bg-gray-800 dark:border-gray-700">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2 dark:text-gray-100">
+                    <i data-lucide="history" class="text-blue-600"></i> <span id="log-modal-title">Activity Log</span>
+                </h3>
+                <button onclick="closeLogModal()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-grow bg-white dark:bg-gray-900">
+                <table class="excel-table w-full">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%">Time</th>
+                            <th style="width: 15%">Action</th>
+                            <th style="width: 40%">Details</th>
+                            <th style="width: 25%">Change / Restore</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-modal-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+                <div id="log-modal-empty" class="text-center py-8 text-gray-400 text-sm italic hidden">No records found for this section.</div>
+            </div>
+            <div class="p-4 bg-gray-50 border-t border-gray-200 text-right dark:bg-gray-800 dark:border-gray-700">
+                <button onclick="closeLogModal()" class="bg-gray-800 text-white px-4 py-2 rounded text-sm font-bold hover:bg-gray-700">Close</button>
+            </div>
         </div>
     </div>
 
@@ -284,8 +330,8 @@
                             <input type="month" id="hisab-month-filter" class="p-1 border border-gray-300 rounded text-sm font-bold text-gray-800" onchange="loadHisab()">
                         </div>
                         <div class="flex gap-2">
-                             <!-- TICKETING TRASH BUTTON -->
-                             <button onclick="openTrash('hisab')" class="bg-red-100 text-red-600 px-3 py-2 rounded text-xs font-bold hover:bg-red-200 flex items-center gap-1"><i data-lucide="trash-2" class="w-3 h-3"></i> Bin</button>
+                             <!-- POPUP LOG BUTTON -->
+                             <button onclick="openLogModal('hisab')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded text-xs font-bold hover:bg-blue-200 flex items-center gap-1 border border-blue-200"><i data-lucide="history" class="w-3 h-3"></i> History</button>
                              <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-2 rounded text-xs font-bold hover:bg-gray-700 flex items-center gap-1"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
                              <button onclick="exportHisab('month')" class="bg-green-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-1"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Export Excel</button>
                         </div>
@@ -345,8 +391,8 @@
                  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-fit">
                     <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="clipboard-list" class="text-indigo-600"></i> Tasks & Notes</h2>
-                        <!-- NOTES TRASH BUTTON -->
-                        <button onclick="openTrash('notes')" class="text-red-400 hover:text-red-600 p-1" title="View Deleted Notes"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <!-- NOTES LOG BUTTON -->
+                        <button onclick="openLogModal('notes')" class="text-blue-500 hover:text-blue-700 p-1 bg-blue-50 rounded-full" title="Notes History"><i data-lucide="history" class="w-4 h-4"></i></button>
                     </div>
                     <div class="p-4">
                         <form onsubmit="event.preventDefault(); addNote();" class="flex gap-2 mb-4">
@@ -365,8 +411,8 @@
                         <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="plane" class="text-green-600"></i> SalamAir Check-in Tracker</h2>
                         <div>
                             <button onclick="toggleSalamHistory()" class="text-xs font-bold text-gray-500 hover:text-gray-700 underline mr-2">Show History</button>
-                            <!-- CHECK-IN TRASH BUTTON -->
-                            <button onclick="openTrash('salam')" class="text-red-400 hover:text-red-600 p-1" title="View Deleted Check-ins"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            <!-- CHECK-IN LOG BUTTON -->
+                            <button onclick="openLogModal('salam')" class="text-blue-500 hover:text-blue-700 p-1 bg-blue-50 rounded-full" title="Check-in Log"><i data-lucide="history" class="w-4 h-4"></i></button>
                         </div>
                     </div>
                     <div class="p-4 border-b border-gray-100">
@@ -443,8 +489,8 @@
                             <i data-lucide="wallet" class="text-blue-600"></i> Due & Banking
                         </h2>
                         <div class="flex gap-2">
-                            <!-- DUE TRASH BUTTON -->
-                            <button onclick="openTrash('due')" class="bg-red-100 text-red-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-red-200"><i data-lucide="trash-2" class="w-3 h-3"></i> Bin</button>
+                            <!-- DUE LOG BUTTON -->
+                            <button onclick="openLogModal('due')" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-blue-200 border border-blue-200"><i data-lucide="history" class="w-3 h-3"></i> Log</button>
                             <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
                         </div>
                     </div>
@@ -560,8 +606,8 @@
                         <input type="month" id="expense-month-filter" class="p-1 border border-gray-300 rounded text-sm font-bold text-gray-800" onchange="loadExpense()">
                     </div>
                     <div class="flex gap-2">
-                         <!-- EXPENSE TRASH BUTTON -->
-                         <button onclick="openTrash('expense')" class="bg-red-100 text-red-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-red-200"><i data-lucide="trash-2" class="w-3 h-3"></i> Bin</button>
+                         <!-- EXPENSE LOG BUTTON -->
+                         <button onclick="openLogModal('expense')" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-blue-200 border border-blue-200"><i data-lucide="history" class="w-3 h-3"></i> History</button>
                          <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
                          <button onclick="exportExpense()" class="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-green-700 flex items-center gap-1"><i data-lucide="file-spreadsheet" class="w-3 h-3"></i> Export</button>
                     </div>
@@ -623,38 +669,6 @@
                         </thead>
                         <tbody id="expense-table-body" class="text-gray-700 font-mono"></tbody>
                     </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 6: RECYCLE BIN (NEW) -->
-        <div id="tab-trash" class="tab-content">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
-                <div class="p-6 bg-red-50 border-b border-red-200 flex justify-between items-center">
-                    <div>
-                        <h2 id="trash-title" class="text-2xl font-bold text-red-800 flex items-center gap-2">
-                            <i data-lucide="trash-2" class="text-red-600"></i> Recycle Bin
-                        </h2>
-                        <p class="text-sm text-red-600 mt-1">Deleted items are stored here safely.</p>
-                    </div>
-                    <button onclick="closeTrash()" class="bg-white text-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-100 border border-gray-300 shadow-sm">Back to App</button>
-                </div>
-                <div class="p-6">
-                    <table class="excel-table w-full">
-                        <thead>
-                            <tr>
-                                <th style="width: 10%">Source</th>
-                                <th style="width: 15%">Original Date</th>
-                                <th style="width: 40%">Details / Name</th>
-                                <th style="width: 15%">Amount</th>
-                                <th style="width: 20%">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="trash-table-body">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                    <div id="trash-empty" class="text-center py-8 text-gray-400 text-sm italic hidden">Recycle Bin is empty.</div>
                 </div>
             </div>
         </div>
@@ -766,17 +780,6 @@
     </div>
 
     <script>
-        // PWA SERVICE WORKER REGISTRATION
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW Registered!', reg.scope))
-                    .catch(err => console.log('SW Failed', err));
-            });
-        }
-    </script>
-
-    <script>
         const STORAGE_PREFIX = 'holiday_inv_';
         const STORAGE_KEY_COUNTER = 'holidayTravelsInvoiceNum';
         const STORAGE_HISAB = 'holiday_ledger_data';
@@ -785,7 +788,7 @@
         const STORAGE_NOTES = 'holiday_notes_data';
         const STORAGE_SALAM = 'holiday_salam_data';
         const STORAGE_SALAM_HISTORY = 'holiday_salam_history';
-        const STORAGE_TRASH = 'holiday_trash_data';
+        const STORAGE_LOG = 'holiday_system_log';
         let dueViewMode = 'active'; 
         let currentTrashSource = null;
         
@@ -855,173 +858,156 @@
             if(tabName === 'due') loadDueData();
             if(tabName === 'expense') loadExpense();
             if(tabName === 'notes') loadNotes(); 
-            if(tabName === 'trash') loadTrash();
+            // if(tabName === 'trash') loadTrash();
             if(tabName === 'invoice') {
                 const tbody = document.getElementById('items-table-body');
                 if(tbody && tbody.children.length === 0) window.addRow();
             }
         }
 
-        // --- TRASH SYSTEM LOGIC ---
+        // --- TRASH & LOG SYSTEM LOGIC ---
         function getTrashData() {
             return JSON.parse(localStorage.getItem(STORAGE_TRASH) || '[]');
         }
 
-        function addToTrash(item, source) {
-            const trash = getTrashData();
-            // Add metadata
-            item.deletedSource = source;
-            item.deletedDate = new Date().toISOString();
-            trash.push(item);
-            localStorage.setItem(STORAGE_TRASH, JSON.stringify(trash));
+        // Modified addToTrash to effectively just log a delete action for now, or keep separate if needed.
+        // Based on user request, "LOG" should handle everything. So we merge Trash into Log concepts.
+        // We will store all actions in STORAGE_LOG. 'delete' type actions are the trash.
+
+        function logSystemActivity(type, source, desc, oldVal = null, newVal = null, fullItem = null) {
+            const logs = JSON.parse(localStorage.getItem(STORAGE_LOG) || '[]');
+            logs.unshift({
+                id: Date.now(),
+                date: new Date().toISOString(),
+                type, // 'create', 'edit', 'delete'
+                source,
+                desc,
+                oldVal,
+                newVal,
+                fullItem // For restore
+            });
+            if (logs.length > 500) logs.pop(); // Keep last 500 actions
+            localStorage.setItem(STORAGE_LOG, JSON.stringify(logs));
         }
 
-        function openTrash(source) {
-            currentTrashSource = source;
-            switchTab('trash');
+        function openLogModal(source) {
+            currentTrashSource = source; // Reusing this var for filter context
+            const titles = {
+                'hisab': 'Ticketing History',
+                'notes': 'Notes History',
+                'salam': 'Check-in Log',
+                'due': 'Due & Bank Log',
+                'expense': 'Expense Log'
+            };
+            document.getElementById('log-modal-title').textContent = titles[source] || 'Activity Log';
+            loadLogModalData();
+            document.getElementById('log-modal').style.display = 'flex';
         }
 
-        function closeTrash() {
-            if (currentTrashSource) {
-                // Return to the tab associated with the source
-                const map = {
-                    'hisab': 'hisab',
-                    'notes': 'notes',
-                    'salam': 'notes',
-                    'due': 'due',
-                    'expense': 'expense'
-                };
-                switchTab(map[currentTrashSource] || 'dashboard');
-            } else {
-                switchTab('dashboard');
-            }
+        function closeLogModal() {
+            document.getElementById('log-modal').style.display = 'none';
             currentTrashSource = null;
         }
 
-        function restoreTrashItem(id) {
-            const trash = getTrashData();
-            const index = trash.findIndex(i => i.id === id);
-            if (index === -1) return;
+        function restoreLogItem(id) {
+            const logs = JSON.parse(localStorage.getItem(STORAGE_LOG) || '[]');
+            const index = logs.findIndex(l => l.id === id);
+            if(index === -1) return;
+            const logEntry = logs[index];
+            
+            if(logEntry.type !== 'delete') return; 
+            
+            const item = logEntry.fullItem;
+            if(!item) return alert("Cannot restore: Data missing.");
 
-            const item = trash[index];
-            const source = item.deletedSource;
-
-            // Remove metadata before restoring
-            delete item.deletedSource;
-            delete item.deletedDate;
-
-            // Restore based on source
-            if (source === 'hisab') {
+            // Restore logic based on source
+            if(logEntry.source === 'hisab') {
                 const data = getHisabData();
                 data.push(item);
                 localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
-                showMessage("Restored to Ticketing");
-            } else if (source === 'notes') {
+                if(document.getElementById('tab-hisab').classList.contains('active')) loadHisab();
+            } else if(logEntry.source === 'notes') {
                 const data = getNotes();
                 data.push(item);
                 localStorage.setItem(STORAGE_NOTES, JSON.stringify(data));
-                showMessage("Restored to Notes");
-            } else if (source === 'salam') {
+                if(document.getElementById('tab-notes').classList.contains('active')) loadGeneralNotes();
+            } else if(logEntry.source === 'salam') {
                 const data = getSalamReminders();
                 data.push(item);
                 localStorage.setItem(STORAGE_SALAM, JSON.stringify(data));
-                showMessage("Restored to Check-in");
-            } else if (source === 'due') {
+                if(document.getElementById('tab-notes').classList.contains('active')) loadSalamReminders();
+            } else if(logEntry.source === 'due') {
                 const data = getDueData();
                 data.push(item);
                 localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
-                showMessage("Restored to Due/Bank");
-            } else if (source === 'expense') {
+                if(document.getElementById('tab-due').classList.contains('active')) loadDueData();
+            } else if(logEntry.source === 'expense') {
                 const data = getExpenseData();
                 data.push(item);
                 localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(data));
-                showMessage("Restored to Expenses");
+                if(document.getElementById('tab-expense').classList.contains('active')) loadExpense();
             }
 
-            // Remove from trash
-            trash.splice(index, 1);
-            localStorage.setItem(STORAGE_TRASH, JSON.stringify(trash));
-            loadTrash();
+            // Mark as restored by removing the log entry (or we could change type to 'restored')
+            logs.splice(index, 1);
+            localStorage.setItem(STORAGE_LOG, JSON.stringify(logs));
+            
+            logSystemActivity('create', logEntry.source, `Restored: ${logEntry.desc}`);
+            loadLogModalData(); // Refresh modal
+            alert("Item Restored Successfully!");
         }
 
-        function permanentDeleteTrashItem(id) {
-            if(!confirm("Are you sure? This cannot be undone.")) return;
-            const trash = getTrashData();
-            const newTrash = trash.filter(i => i.id !== id);
-            localStorage.setItem(STORAGE_TRASH, JSON.stringify(newTrash));
-            loadTrash();
-        }
-
-        function loadTrash() {
-            const tbody = document.getElementById('trash-table-body');
-            let trash = getTrashData();
+        function loadLogModalData() {
+            const tbody = document.getElementById('log-modal-body');
+            let logs = JSON.parse(localStorage.getItem(STORAGE_LOG) || '[]');
             tbody.innerHTML = '';
 
-            // FILTER
+            // Filter by current source context
             if (currentTrashSource) {
-                trash = trash.filter(item => item.deletedSource === currentTrashSource);
-                const titles = {
-                   'hisab': 'Deleted Ticketing Items',
-                   'notes': 'Deleted Notes',
-                   'salam': 'Deleted Check-ins',
-                   'due': 'Deleted Due/Bank Items',
-                   'expense': 'Deleted Expenses'
-                };
-                const titleEl = document.getElementById('trash-title');
-                if(titleEl) {
-                    titleEl.innerHTML = `<i data-lucide="trash-2" class="text-red-600"></i> ${titles[currentTrashSource] || 'Recycle Bin'}`;
-                }
-            } else {
-                // If accessed directly somehow, show all
-                const titleEl = document.getElementById('trash-title');
-                if(titleEl) titleEl.innerHTML = `<i data-lucide="trash-2" class="text-red-600"></i> Recycle Bin (All)`;
+                logs = logs.filter(item => item.source === currentTrashSource);
             }
 
-            if (trash.length === 0) {
-                document.getElementById('trash-empty').classList.remove('hidden');
+            if (logs.length === 0) {
+                document.getElementById('log-modal-empty').classList.remove('hidden');
             } else {
-                document.getElementById('trash-empty').classList.add('hidden');
+                document.getElementById('log-modal-empty').classList.add('hidden');
                 
-                // Sort by deleted date desc
-                trash.sort((a,b) => new Date(b.deletedDate) - new Date(a.deletedDate));
+                // Sort by date desc
+                logs.sort((a,b) => new Date(b.date) - new Date(a.date));
 
-                trash.forEach(item => {
+                logs.forEach(log => {
                     const row = document.createElement('tr');
                     
-                    // Determine display details based on source
-                    let details = '';
-                    let amount = '-';
-                    let sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-gray-200 text-gray-700 uppercase">${item.deletedSource}</span>`;
+                    let badgeClass = "bg-gray-100 text-gray-700";
+                    if(log.type === 'create') badgeClass = "bg-green-100 text-green-700";
+                    if(log.type === 'edit') badgeClass = "bg-blue-100 text-blue-700";
+                    if(log.type === 'delete') badgeClass = "bg-red-100 text-red-700";
 
-                    if (item.deletedSource === 'hisab') {
-                        details = `${item.name} (${item.pnr || '-'}) - ${item.sector}`;
-                        amount = item.sell;
-                        sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700 uppercase">Ticketing</span>`;
-                    } else if (item.deletedSource === 'notes') {
-                        details = item.text;
-                        sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-yellow-100 text-yellow-700 uppercase">Note</span>`;
-                    } else if (item.deletedSource === 'salam') {
-                        details = `${item.name} (${item.pnr}) - Flight: ${item.date}`;
-                        sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700 uppercase">Check-in</span>`;
-                    } else if (item.deletedSource === 'due') {
-                        details = `${item.type === 'bank' ? item.bankName : item.name} (${item.status})`;
-                        amount = item.amount;
-                        sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700 uppercase">Due/Bank</span>`;
-                    } else if (item.deletedSource === 'expense') {
-                        details = `${item.desc} (${item.type})`;
-                        amount = item.amount;
-                        sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-700 uppercase">Expense</span>`;
+                    let changeText = "-";
+                    if (log.type === 'edit') {
+                        // Safe check for nulls
+                        const oVal = log.oldVal !== null ? log.oldVal : '';
+                        const nVal = log.newVal !== null ? log.newVal : '';
+                        changeText = `<span class="text-red-500 line-through mr-1">${oVal}</span> <i data-lucide="arrow-right" class="w-3 h-3 inline text-gray-400"></i> <span class="text-green-600 font-bold ml-1">${nVal}</span>`;
+                    } else if (log.type === 'delete') {
+                        changeText = `<span class="text-red-600 font-bold">Deleted</span>`;
+                    } else {
+                        changeText = `<span class="text-green-600">Added</span>`;
+                    }
+
+                    let restoreBtn = "";
+                    if(log.type === 'delete') {
+                        restoreBtn = `<button onclick="restoreLogItem(${log.id})" class="text-white bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 mx-auto"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Restore</button>`;
                     }
 
                     row.innerHTML = `
-                        <td class="text-center">${sourceLabel}</td>
-                        <td class="text-xs text-gray-500">${new Date(item.deletedDate).toLocaleString()}</td>
-                        <td class="font-medium text-sm text-gray-700">${details}</td>
-                        <td class="font-mono text-sm">${amount !== '-' ? parseFloat(amount).toFixed(3) : '-'}</td>
-                        <td class="text-center">
-                            <button onclick="restoreTrashItem(${item.id})" class="text-green-600 hover:text-green-800 font-bold text-xs mr-3"><i data-lucide="rotate-ccw" class="w-4 h-4 inline"></i> Restore</button>
-                            <button onclick="permanentDeleteTrashItem(${item.id})" class="text-red-500 hover:text-red-700 font-bold text-xs"><i data-lucide="trash-2" class="w-4 h-4 inline"></i> Delete</button>
+                        <td class="text-xs text-gray-500">${new Date(log.date).toLocaleString()}</td>
+                        <td class="text-center"><span class="px-2 py-1 rounded text-xs font-bold uppercase ${badgeClass}">${log.type}</span></td>
+                        <td class="text-sm font-medium text-gray-700">
+                            ${log.desc}
                         </td>
+                        <td class="text-sm font-mono text-center">${changeText}</td>
+                        <td class="text-center">${restoreBtn}</td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -1300,6 +1286,15 @@
             const data = getHisabData();
             const index = data.findIndex(e => e.id === parseInt(id));
             if (index !== -1) {
+                // Log Edit
+                const oldVal = data[index].sell;
+                const newVal = updatedEntry.sell;
+                if(oldVal !== newVal) {
+                    logSystemActivity('edit', 'hisab', `Updated Ticket for ${data[index].name}`, oldVal, newVal);
+                } else if (JSON.stringify(data[index]) !== JSON.stringify({...data[index], ...updatedEntry})) {
+                     logSystemActivity('edit', 'hisab', `Updated details for ${data[index].name}`, null, null);
+                }
+
                 data[index] = { ...data[index], ...updatedEntry }; 
                 localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
                 loadHisab();
@@ -1309,6 +1304,9 @@
 
         function addHisabTransaction(entry) {
             const data = getHisabData();
+            // Log Create
+            logSystemActivity('create', 'hisab', `Added Ticket: ${entry.name}`, null, null, entry);
+
             if(entry.invoiceId) {
                 const exists = data.findIndex(e => e.invoiceId === entry.invoiceId);
                 if(exists > -1) {
@@ -1445,16 +1443,15 @@
 
         function deleteHisabEntry(id) {
             event.stopPropagation();
-            if(!confirm('Delete this entry? It will be moved to the Recycle Bin.')) return;
+            if(!confirm('Delete this entry? It will be moved to the Log (Trash).')) return;
             
             const data = getHisabData();
             const item = data.find(e => e.id === id);
             
             if (item) {
-                // Move to trash
-                addToTrash(item, 'hisab');
+                // Log Delete
+                logSystemActivity('delete', 'hisab', `Deleted Ticket: ${item.name}`, null, null, item);
                 
-                // Remove from active list
                 const newData = data.filter(e => e.id !== id);
                 localStorage.setItem(STORAGE_HISAB, JSON.stringify(newData));
                 
@@ -1577,7 +1574,12 @@
             if(!date || !desc || amount === 0) return alert('Please fill all fields');
 
             const data = getExpenseData();
-            data.push({ id: Date.now(), date, desc, type, amount });
+            const item = { id: Date.now(), date, desc, type, amount };
+            
+            // Log Create
+            logSystemActivity('create', 'expense', `Added Expense: ${desc}`, null, null, item);
+
+            data.push(item);
             localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(data));
             
             // Reset
@@ -1587,13 +1589,15 @@
         }
 
         function deleteExpenseEntry(id) {
-            if(!confirm('Delete this expense? It will be moved to the Recycle Bin.')) return;
+            if(!confirm('Delete this expense?')) return;
             
             const data = getExpenseData();
             const item = data.find(e => e.id === id);
             
             if(item) {
-                addToTrash(item, 'expense');
+                // Log Delete
+                logSystemActivity('delete', 'expense', `Deleted Expense: ${item.desc}`, null, null, item);
+                
                 const newData = data.filter(e => e.id !== id);
                 localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(newData));
                 loadExpense();
@@ -1701,6 +1705,10 @@
                 paymentDate: '',
                 notes: '' // Initialize notes
             };
+            
+            // Log Create
+            logSystemActivity('create', 'due', `Added ${type} row`, null, null, newItem);
+
             data.push(newItem);
             localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
             loadDueData();
@@ -1718,35 +1726,43 @@
                     const val = parseFloat(payAmount);
                     
                     if (val && val > 0 && val < currentAmount) {
-                        // 1. Reduce current amount
+                        const oldAmount = data[index].amount;
                         data[index].amount = currentAmount - val;
-                        // 2. Create new history item for the paid part
+                        // Log Split
+                        logSystemActivity('edit', 'due', `Partial Pay: ${data[index].name}`, oldAmount, data[index].amount);
+
                         const historyItem = {
                             ...data[index],
-                            id: Date.now(), // New ID
+                            id: Date.now(), 
                             amount: val,
                             status: 'Paid',
                             paymentDate: new Date().toISOString().split('T')[0],
                             name: data[index].name + ' (Partial)',
-                            notes: data[index].notes // Keep notes
+                            notes: data[index].notes
                         };
                         data.push(historyItem);
-                        
                         localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
                         loadDueData();
                         return;
                     } else if (val >= currentAmount) {
-                         // Paid full
                          data[index].status = 'Paid';
                          data[index].paymentDate = new Date().toISOString().split('T')[0];
                          localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
                          loadDueData();
                          return;
                     } else {
-                        // Cancelled
-                        loadDueData(); // Reset select
+                        loadDueData(); 
                         return;
                     }
+                }
+
+                // Log standard Edit
+                const oldVal = data[index][field];
+                if (oldVal != value) { // loose equality
+                     const itemName = data[index].name || data[index].bankName || 'Item';
+                     // Specifically label amount changes
+                     const label = field === 'amount' ? 'Amount' : field;
+                     logSystemActivity('edit', 'due', `Updated ${label} for ${itemName}`, oldVal, value);
                 }
 
                 data[index][field] = value;
@@ -1765,22 +1781,20 @@
             }
         }
 
-        // Replaced lastDeletedDue logic with full trash system
         function deleteDueItem(id) {
-            if(!confirm('Delete this item? It will be moved to the Recycle Bin.')) return;
+            if(!confirm('Delete this item?')) return;
             const data = getDueData();
             const itemIndex = data.findIndex(e => e.id === id);
             if (itemIndex > -1) {
-                addToTrash(data[itemIndex], 'due');
+                const item = data[itemIndex];
+                // Log Delete
+                const itemName = item.name || item.bankName || 'Item';
+                logSystemActivity('delete', 'due', `Deleted: ${itemName}`, null, null, item);
+
                 data.splice(itemIndex, 1);
                 localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
                 loadDueData();
             }
-        }
-
-        function undoDeleteDue() {
-            // Deprecated - Use Recycle Bin
-            alert("Please use the Recycle Bin tab to restore items.");
         }
 
         function loadDueData() {
@@ -1944,280 +1958,13 @@
             return row;
         }
 
-        // --- DASHBOARD LOGIC ---
-        function updateDashboard() {
-            const data = getHisabData();
-            const dueData = getDueData(); // Get dues for dashboard
-            
-            // 1. Calculate Aggregates per Month (Sales & Profit)
-            const monthlyStats = {};
-            let yearSell = 0, yearProfit = 0;
-
-            data.forEach(item => {
-                // Ensure item.date exists before substring
-                if (!item.date) return;
-                const monthKey = item.date.substring(0, 7); // "YYYY-MM"
-                const profit = item.sell - item.net;
-                
-                if (!monthlyStats[monthKey]) {
-                    monthlyStats[monthKey] = { sell: 0, net: 0, profit: 0 };
-                }
-                
-                monthlyStats[monthKey].sell += item.sell;
-                monthlyStats[monthKey].net += item.net;
-                monthlyStats[monthKey].profit += profit;
-                
-                yearSell += item.sell;
-                yearProfit += profit;
-            });
-            
-            // Calculate Total Due from Due & Banking tab
-            let totalDue = 0;
-            dueData.forEach(item => {
-                const amt = parseFloat(item.amount) || 0;
-                if (item.type === 'customer' && (item.status === 'Pending' || item.status === 'Urgent')) {
-                    totalDue += amt;
-                }
-            });
-
-            // 2. Sort Months
-            const sortedMonths = Object.keys(monthlyStats).sort();
-            
-            // 3. Prepare Chart Data
-            const labels = sortedMonths; 
-            const salesData = sortedMonths.map(m => monthlyStats[m].sell);
-            const netData = sortedMonths.map(m => monthlyStats[m].net);
-            const profitData = sortedMonths.map(m => monthlyStats[m].profit);
-
-            // 4. Update Stats Cards
-            const tSell = document.getElementById('dash-total-sell'); if(tSell) tSell.textContent = yearSell.toFixed(3);
-            const tProf = document.getElementById('dash-total-profit'); if(tProf) tProf.textContent = yearProfit.toFixed(3);
-            const tDue = document.getElementById('dash-total-due'); if(tDue) tDue.textContent = totalDue.toFixed(3);
-
-            // 5. Render/Update Charts
-            renderSalesChart(labels, salesData, netData);
-            renderProfitChart(labels, profitData);
-            renderExpenseChart(); 
-            renderDueChart(); 
-            
-            // 6. CHECK-IN ALERTS
-            updateDashboardCheckins();
-        }
-
-        function updateDashboardCheckins() {
-            const reminders = getSalamReminders(); // Uses existing function from Notes logic
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate() + 1);
-            
-            const urgent = [];
-            
-            reminders.forEach(r => {
-                const flightDate = new Date(r.date);
-                flightDate.setHours(0,0,0,0);
-                
-                // Check if Today or Tomorrow
-                if (flightDate.getTime() === today.getTime() || flightDate.getTime() === tomorrow.getTime()) {
-                    urgent.push(r);
-                }
-            });
-            
-            const alertBox = document.getElementById('dashboard-alerts');
-            if (!alertBox) return;
-
-            if (urgent.length > 0) {
-                alertBox.classList.remove('hidden');
-                let html = `
-                <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r shadow-sm">
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="flex items-center">
-                            <i data-lucide="bell-ring" class="h-6 w-6 text-amber-600 mr-3 animate-pulse"></i>
-                            <div>
-                                <h3 class="text-lg font-bold text-amber-900">Urgent Check-ins Needed (${urgent.length})</h3>
-                                <p class="text-sm text-amber-700">Passengers flying within 48 hours.</p>
-                            </div>
-                        </div>
-                        <button onclick="switchTab('notes')" class="bg-amber-600 text-white text-xs px-4 py-1.5 rounded-lg font-bold hover:bg-amber-700 shadow-sm transition-colors">
-                            Go to Check-in
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">`;
-                    
-                urgent.forEach(r => {
-                     const fDate = new Date(r.date);
-                     fDate.setHours(0,0,0,0);
-                     const isToday = fDate.getTime() === today.getTime();
-                     const badge = isToday 
-                        ? `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-red-200">Flight Today</span>` 
-                        : `<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-blue-200">Tomorrow</span>`;
-                     
-                     html += `
-                      <div class="flex justify-between items-center bg-white p-2.5 rounded border border-amber-100 shadow-sm">
-                        <div class="flex flex-col">
-                            <span class="font-bold text-gray-800 text-sm">${r.name}</span>
-                            <span class="font-mono text-xs text-gray-500">PNR: ${r.pnr}</span>
-                        </div>
-                        ${badge}
-                      </div>`;
-                });
-                
-                html += `</div></div>`;
-                alertBox.innerHTML = html;
-                lucide.createIcons();
-            } else {
-                alertBox.classList.add('hidden');
-                alertBox.innerHTML = '';
-            }
-        }
-
-        let salesChartInstance = null;
-        let profitChartInstance = null;
-        let expenseChartInstance = null;
-        let dueChartInstance = null;
-
-        function renderSalesChart(labels, sales, net) {
-            const ctx = document.getElementById('salesChart').getContext('2d');
-            if (salesChartInstance) salesChartInstance.destroy();
-
-            salesChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Total Sell', data: sales, backgroundColor: '#22c55e' },
-                        { label: 'Total Net Cost', data: net, backgroundColor: '#ef4444' }
-                    ]
-                },
-                options: { responsive: true, scales: { y: { beginAtZero: true } } }
-            });
-        }
-
-        function renderProfitChart(labels, profit) {
-            const ctx = document.getElementById('profitChart').getContext('2d');
-            if (profitChartInstance) profitChartInstance.destroy();
-
-            profitChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{ label: 'Net Profit', data: profit, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, tension: 0.4 }]
-                },
-                options: { responsive: true }
-            });
-        }
-
-        function renderExpenseChart() {
-            const expData = getExpenseData();
-            let office = 0, personal = 0;
-            // Get all time or filter by year? Let's do all time for overview
-            expData.forEach(e => {
-                if(e.type === 'Office') office += e.amount;
-                else personal += e.amount;
-            });
-
-            const ctx = document.getElementById('expenseChart').getContext('2d');
-            if (expenseChartInstance) expenseChartInstance.destroy();
-
-            expenseChartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Office', 'Personal'],
-                    datasets: [{ data: [office, personal], backgroundColor: ['#3b82f6', '#a855f7'] }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
-
-        function renderDueChart() {
-            const dueData = getDueData();
-            let receive = 0, pay = 0;
-            dueData.forEach(item => {
-                const amt = parseFloat(item.amount) || 0;
-                if(item.status === 'Pending') {
-                    if(item.type === 'customer') receive += amt;
-                    if(item.type === 'payable') pay += amt;
-                }
-            });
-
-            const ctx = document.getElementById('dueChart').getContext('2d');
-            if (dueChartInstance) dueChartInstance.destroy();
-
-            dueChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Receivable (Customer Due)', 'Payable (My Due)'],
-                    datasets: [{ 
-                        label: 'Amount (OMR)', 
-                        data: [receive, pay], 
-                        backgroundColor: ['#3b82f6', '#ef4444'] 
-                    }]
-                },
-                options: { responsive: true, scales: { y: { beginAtZero: true } } }
-            });
-        }
-
-        window.backupData = () => {
-            const data = {};
-            // Loop through all local storage
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                // Backup specific app keys + any key starting with holiday_
-                if (key.startsWith('holiday_') || key === 'holidayTravelsInvoiceNum') {
-                    data[key] = localStorage.getItem(key);
-                }
-            }
-            const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `HolidayTravels_FullBackup_${new Date().toISOString().slice(0,10)}.json`;
-            a.click();
-        };
-
-        window.restoreData = (input) => {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    
-                    // Wipe existing App Data to prevent mixing versions
-                    const keysToRemove = [];
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key.startsWith('holiday_') || key === 'holidayTravelsInvoiceNum') {
-                            keysToRemove.push(key);
-                        }
-                    }
-                    keysToRemove.forEach(k => localStorage.removeItem(k));
-
-                    // Load Backup Data
-                    Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
-                    
-                    alert('Data Replaced Successfully!');
-                    location.reload();
-                } catch(e) { 
-                    alert('Invalid File Format. Please select a valid backup JSON.'); 
-                }
-            };
-            reader.readAsText(file);
-        };
-
-        setTodayDate();
-        initializeInvoiceNumber();
-        if(itemsTableBody && itemsTableBody.children.length === 0) addRow();
-        
-        // ... (Notes & Check-in Logic)
-
+        // --- NOTES LOGIC ---
         function loadNotes() {
             loadGeneralNotes();
             loadSalamReminders();
             loadSalamHistory();
         }
 
-        // --- General Notes ---
         function getNotes() {
             return JSON.parse(localStorage.getItem(STORAGE_NOTES) || '[]');
         }
@@ -2228,7 +1975,10 @@
             if (!text) return;
             
             const notes = getNotes();
-            notes.push({ id: Date.now(), text: text, done: false });
+            const newItem = { id: Date.now(), text: text, done: false };
+            logSystemActivity('create', 'notes', `Added Note: ${text}`, null, null, newItem);
+
+            notes.push(newItem);
             localStorage.setItem(STORAGE_NOTES, JSON.stringify(notes));
             input.value = '';
             loadGeneralNotes();
@@ -2238,7 +1988,7 @@
             const notes = getNotes();
             const item = notes.find(n => n.id === id);
             if(item) {
-                addToTrash(item, 'notes');
+                logSystemActivity('delete', 'notes', `Deleted Note: ${item.text}`, null, null, item);
                 const newNotes = notes.filter(n => n.id !== id);
                 localStorage.setItem(STORAGE_NOTES, JSON.stringify(newNotes));
                 loadGeneralNotes();
@@ -2295,7 +2045,9 @@
                 document.getElementById('btn-salam-add').classList.add('bg-green-600', 'hover:bg-green-700');
             } else {
                 // ADD NEW
-                reminders.push({ id: Date.now(), pnr, name, date, remark });
+                const item = { id: Date.now(), pnr, name, date, remark };
+                logSystemActivity('create', 'salam', `Added Check-in: ${name}`, null, null, item);
+                reminders.push(item);
             }
             
             localStorage.setItem(STORAGE_SALAM, JSON.stringify(reminders));
@@ -2370,7 +2122,7 @@
             const item = reminders.find(r => r.id === id);
             
             if(item) {
-                addToTrash(item, 'salam');
+                logSystemActivity('delete', 'salam', `Deleted Check-in: ${item.name}`, null, null, item);
                 const newReminders = reminders.filter(r => r.id !== id);
                 localStorage.setItem(STORAGE_SALAM, JSON.stringify(newReminders));
                 
@@ -2506,7 +2258,10 @@
             // const exists = reminders.some(r => r.pnr === pnr && r.name === name);
             // if(exists) { alert("Already in check-in list"); return; }
             
-            reminders.push({ id: Date.now(), pnr, name, date, remark });
+            const newItem = { id: Date.now(), pnr, name, date, remark };
+            logSystemActivity('create', 'salam', `Added Check-in from Ledger: ${name}`, null, null, newItem);
+
+            reminders.push(newItem);
             localStorage.setItem(STORAGE_SALAM, JSON.stringify(reminders));
             
             alert(`Added ${name} to SalamAir Check-in Tracker!`);
