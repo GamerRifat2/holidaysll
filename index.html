@@ -838,6 +838,13 @@
             passInput.focus();
         }
 
+        // --- DATA GETTERS ---
+        function getHisabData() { return JSON.parse(localStorage.getItem(STORAGE_HISAB) || '[]'); }
+        function getDueData() { return JSON.parse(localStorage.getItem(STORAGE_DUE) || '[]'); }
+        function getExpenseData() { return JSON.parse(localStorage.getItem(STORAGE_EXPENSE) || '[]'); }
+        function getNotes() { return JSON.parse(localStorage.getItem(STORAGE_NOTES) || '[]'); }
+        function getSalamReminders() { return JSON.parse(localStorage.getItem(STORAGE_SALAM) || '[]'); }
+
         // --- TABS ---
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -859,6 +866,7 @@
             if(tabName === 'dashboard') {
                 updateDashboard();
                 loadNotes(); 
+                loadSalamReminders();
             }
             if(tabName === 'due') loadDueData();
             if(tabName === 'expense') loadExpense();
@@ -947,7 +955,7 @@
                 data.push(item);
                 localStorage.setItem(STORAGE_NOTES, JSON.stringify(data));
                 // Notes are now in dashboard
-                if(document.getElementById('tab-dashboard').classList.contains('active')) loadGeneralNotes();
+                if(document.getElementById('tab-dashboard').classList.contains('active')) loadNotes();
             } else if(logEntry.source === 'salam') {
                 const data = getSalamReminders();
                 data.push(item);
@@ -1186,6 +1194,643 @@
                 alertBox.classList.add('hidden');
                 alertBox.innerHTML = '';
             }
+        }
+
+        // --- HISAB (TICKETING) FUNCTIONS ---
+        function loadHisab() {
+            const data = getHisabData();
+            const filterMonth = document.getElementById('hisab-month-filter').value; // YYYY-MM
+            const tbody = document.getElementById('hisab-table-body');
+            tbody.innerHTML = '';
+            
+            let totNet = 0, totSell = 0, totProfit = 0;
+
+            const filtered = data.filter(item => !filterMonth || item.date.startsWith(filterMonth));
+            
+            filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            filtered.forEach(item => {
+                const sell = parseFloat(item.sell) || 0;
+                const net = parseFloat(item.net) || 0;
+                const profit = sell - net;
+
+                totNet += net;
+                totSell += sell;
+                totProfit += profit;
+
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-blue-50 cursor-pointer';
+                row.onclick = (e) => {
+                    if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'I') editHisab(item.id);
+                };
+                
+                row.innerHTML = `
+                    <td class="text-center font-bold text-xs text-gray-500">${item.date}</td>
+                    <td class="font-bold text-gray-800" title="${item.name}">${item.name}</td>
+                    <td class="text-center font-mono text-xs">${item.pnr || '-'}</td>
+                    <td class="text-center text-xs text-blue-600">${formatDateSafe(item.flight_date)}</td>
+                    <td class="text-right text-red-600 font-medium">${net.toFixed(3)}</td>
+                    <td class="text-right text-green-600 font-bold">${sell.toFixed(3)}</td>
+                    <td class="text-right font-black ${profit>=0 ? 'text-blue-600' : 'text-red-500'} bg-blue-50">${profit.toFixed(3)}</td>
+                    <td class="text-xs text-gray-500">${item.sector || '-'}</td>
+                    <td class="text-xs font-mono text-gray-500">${item.phone || '-'}</td>
+                    <td class="text-xs text-gray-500 italic truncate max-w-[100px]" title="${item.remark}">${item.remark || '-'}</td>
+                    <td class="text-center no-print">
+                        <button onclick="deleteHisab(${item.id}, event)" class="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('tot-net').textContent = totNet.toFixed(3);
+            document.getElementById('tot-sell').textContent = totSell.toFixed(3);
+            document.getElementById('tot-profit').textContent = totProfit.toFixed(3);
+            document.getElementById('sheet-header-date').textContent = filterMonth ? `Statement: ${filterMonth}` : 'All Time Records';
+            lucide.createIcons();
+        }
+
+        function addHisabEntry() {
+            const data = getHisabData();
+            const id = document.getElementById('h-edit-id').value;
+            const date = document.getElementById('h-date').value || new Date().toISOString().split('T')[0];
+            const name = document.getElementById('h-name').value;
+            const pnr = document.getElementById('h-pnr').value;
+            // Use date as default flight date if empty
+            const fdate = document.getElementById('h-fdate').value || date; 
+            const sector = document.getElementById('h-sector').value;
+            const phone = document.getElementById('h-phone').value;
+            const net = document.getElementById('h-net').value;
+            const sell = document.getElementById('h-sell').value;
+            const remark = document.getElementById('h-remark').value;
+
+            const entry = {
+                id: id ? parseInt(id) : Date.now(),
+                date, name, pnr, flight_date: fdate, sector, phone, net, sell, remark
+            };
+
+            if (id) {
+                const index = data.findIndex(i => i.id == id);
+                if (index > -1) {
+                    const oldItem = data[index];
+                    logSystemActivity('edit', 'hisab', `Edited Ticket: ${name}`, oldItem.sell, entry.sell);
+                    data[index] = entry;
+                }
+            } else {
+                data.push(entry);
+                logSystemActivity('create', 'hisab', `New Ticket: ${name}`);
+            }
+
+            localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
+            loadHisab();
+            cancelEdit();
+        }
+
+        function editHisab(id) {
+            const data = getHisabData();
+            const item = data.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('h-edit-id').value = item.id;
+            document.getElementById('h-date').value = item.date;
+            document.getElementById('h-name').value = item.name;
+            document.getElementById('h-pnr').value = item.pnr || '';
+            document.getElementById('h-fdate').value = item.flight_date || '';
+            document.getElementById('h-sector').value = item.sector || '';
+            document.getElementById('h-phone').value = item.phone || '';
+            document.getElementById('h-net').value = item.net;
+            document.getElementById('h-sell').value = item.sell;
+            document.getElementById('h-remark').value = item.remark || '';
+
+            document.getElementById('btn-add-update').textContent = 'UPDATE';
+            document.getElementById('btn-add-update').className = "flex-grow bg-orange-500 text-white p-1.5 rounded font-bold hover:bg-orange-600 text-xs h-[38px] mt-6 shadow-sm transition-colors";
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+        }
+
+        function cancelEdit() {
+            document.querySelector('#tab-hisab form').reset();
+            document.getElementById('h-edit-id').value = '';
+            document.getElementById('btn-add-update').textContent = 'ADD';
+            document.getElementById('btn-add-update').className = "flex-grow bg-blue-600 text-white p-1.5 rounded font-bold hover:bg-blue-700 text-xs h-[38px] mt-6 shadow-sm transition-colors";
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+            // Reset Date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('h-date').value = today;
+        }
+
+        function deleteHisab(id, e) {
+            e.stopPropagation();
+            if (!confirm('Delete this record?')) return;
+            const data = getHisabData();
+            const index = data.findIndex(i => i.id === id);
+            if(index > -1) {
+                const item = data[index];
+                logSystemActivity('delete', 'hisab', `Deleted Ticket: ${item.name}`, null, null, item);
+                data.splice(index, 1);
+                localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
+                loadHisab();
+            }
+        }
+        
+        function addHisabTransaction(txData) {
+            const data = getHisabData();
+            txData.id = Date.now();
+            data.push(txData);
+            localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
+            logSystemActivity('create', 'hisab', `Auto-Ledger from Invoice #${txData.invoiceId}`);
+        }
+
+        // --- DUE & BANKING FUNCTIONS ---
+        function loadDueData() {
+            const data = getDueData();
+            const activeView = document.getElementById('due-active-view');
+            const historyView = document.getElementById('due-history-view');
+            
+            // Clear tables
+            ['customer', 'payable', 'bank', 'history', 'bank-history'].forEach(t => {
+                document.getElementById(`due-table-${t}`).innerHTML = '';
+            });
+
+            // Handle View Toggle
+            if (dueViewMode === 'active') {
+                activeView.classList.remove('hidden');
+                historyView.classList.add('hidden');
+                document.getElementById('btn-due-active').className = "px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all";
+                document.getElementById('btn-due-history').className = "px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all";
+            } else {
+                activeView.classList.add('hidden');
+                historyView.classList.remove('hidden');
+                document.getElementById('btn-due-active').className = "px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all";
+                document.getElementById('btn-due-history').className = "px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all";
+            }
+
+            let totRec = 0, totPay = 0, totBank = 0;
+
+            // Sort by date desc
+            data.sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+
+            data.forEach(item => {
+                const amt = parseFloat(item.amount) || 0;
+                let tableId = '';
+
+                // Calculate Totals & Assign Table
+                if (item.type === 'customer') {
+                    if (item.status === 'Paid') {
+                        tableId = 'due-table-history';
+                    } else {
+                        tableId = 'due-table-customer';
+                        totRec += amt;
+                    }
+                } else if (item.type === 'payable') {
+                    if (item.status === 'Paid') {
+                        tableId = 'due-table-history';
+                    } else {
+                        tableId = 'due-table-payable';
+                        totPay += amt;
+                    }
+                } else if (item.type === 'bank') {
+                    tableId = 'due-table-bank'; // In active view
+                    // Also add to bank history
+                    renderDueRow(item, 'due-table-bank-history');
+                    totBank += amt;
+                }
+
+                if (tableId) renderDueRow(item, tableId);
+            });
+
+            document.getElementById('due-total-receive').textContent = totRec.toFixed(3);
+            document.getElementById('due-total-pay').textContent = totPay.toFixed(3);
+            document.getElementById('due-total-bank').textContent = totBank.toFixed(3);
+            document.getElementById('due-total-balance').textContent = (totRec + totBank - totPay).toFixed(3);
+            lucide.createIcons();
+        }
+
+        function renderDueRow(item, tableId) {
+            const tbody = document.getElementById(tableId);
+            if (!tbody) return; // For bank history when in active mode
+            
+            const row = document.createElement('tr');
+            const amt = parseFloat(item.amount).toFixed(3);
+            
+            // Common Actions
+            const deleteBtn = `<button onclick="deleteDue(${item.id})" class="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            
+            if (tableId === 'due-table-customer') {
+                row.innerHTML = `
+                    <td class="font-bold text-gray-800">${item.name}</td>
+                    <td class="font-mono text-xs text-gray-500">${item.phone || '-'}</td>
+                    <td class="font-bold text-red-600">${amt}</td>
+                    <td class="text-xs text-gray-500 italic">${item.notes || '-'}</td>
+                    <td><button onclick="toggleDueStatus(${item.id})" class="px-2 py-1 rounded bg-orange-100 text-orange-700 text-xs font-bold hover:bg-orange-200">Pending</button></td>
+                    <td class="text-center no-print">${deleteBtn}</td>
+                `;
+            } else if (tableId === 'due-table-payable') {
+                row.innerHTML = `
+                    <td class="font-bold text-gray-800">${item.name}</td>
+                    <td class="font-bold text-red-600">${amt}</td>
+                    <td class="text-xs text-gray-500">${item.date || '-'}</td>
+                    <td><button onclick="toggleDueStatus(${item.id})" class="px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-bold hover:bg-red-200">Unpaid</button></td>
+                    <td class="text-center no-print">${deleteBtn}</td>
+                `;
+            } else if (tableId === 'due-table-bank' || tableId === 'due-table-bank-history') {
+                row.innerHTML = `
+                    <td class="text-xs text-gray-500">${item.date}</td>
+                    <td class="font-bold text-gray-800">${item.name}</td>
+                    <td class="font-bold text-green-600 font-mono">${amt}</td>
+                    <td class="text-center no-print">${deleteBtn}</td>
+                `;
+            } else if (tableId === 'due-table-history') {
+                const isPayable = item.type === 'payable';
+                const color = isPayable ? 'text-red-600' : 'text-blue-600';
+                const badge = isPayable 
+                    ? `<span class="bg-red-50 text-red-600 px-2 py-1 rounded text-xs font-bold">Payable</span>`
+                    : `<span class="bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs font-bold">Receivable</span>`;
+                
+                row.innerHTML = `
+                    <td>${badge}</td>
+                    <td class="font-bold text-gray-800">${item.name}</td>
+                    <td class="font-bold ${color}">${amt}</td>
+                    <td class="text-xs text-gray-500">${item.notes || item.date || '-'}</td>
+                    <td class="text-xs text-gray-500">${item.paidDate || '-'}</td>
+                    <td><button onclick="toggleDueStatus(${item.id})" class="px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-bold hover:bg-green-200">Paid/Done</button></td>
+                    <td class="text-center no-print">${deleteBtn}</td>
+                `;
+            }
+            tbody.appendChild(row);
+        }
+
+        function addDueRow(type) {
+            let name, amount, notes, date;
+            
+            if (type === 'customer') {
+                name = prompt("Customer Name:");
+                if (!name) return;
+                amount = prompt("Amount (OMR):");
+                notes = prompt("Notes (Optional):");
+            } else if (type === 'payable') {
+                name = prompt("Pay To (Name):");
+                if (!name) return;
+                amount = prompt("Amount (OMR):");
+                date = prompt("Due Date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+            } else if (type === 'bank') {
+                name = prompt("Bank Name / Details:");
+                if (!name) return;
+                amount = prompt("Deposit Amount (OMR):");
+                date = new Date().toISOString().split('T')[0];
+            }
+
+            if (!amount) return;
+
+            const data = getDueData();
+            const newItem = {
+                id: Date.now(),
+                type,
+                name,
+                amount: parseFloat(amount),
+                notes,
+                date,
+                status: 'Pending', // For cust/payable
+                phone: '' // Optional
+            };
+            
+            logSystemActivity('create', 'due', `Added ${type}: ${name} (${amount})`);
+            data.push(newItem);
+            localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
+            loadDueData();
+        }
+
+        function toggleDueStatus(id) {
+            const data = getDueData();
+            const item = data.find(i => i.id === id);
+            if (item) {
+                if (item.status === 'Paid') {
+                    item.status = 'Pending';
+                    item.paidDate = null;
+                } else {
+                    item.status = 'Paid';
+                    item.paidDate = new Date().toISOString().split('T')[0];
+                }
+                localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
+                loadDueData();
+            }
+        }
+
+        function deleteDue(id) {
+            if(!confirm("Delete this entry?")) return;
+            const data = getDueData();
+            const index = data.findIndex(i => i.id === id);
+            if(index > -1) {
+                const item = data[index];
+                logSystemActivity('delete', 'due', `Deleted ${item.type}: ${item.name}`, null, null, item);
+                data.splice(index, 1);
+                localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
+                loadDueData();
+            }
+        }
+        
+        function setDueView(mode) {
+            dueViewMode = mode;
+            loadDueData();
+        }
+
+        // --- EXPENSE FUNCTIONS ---
+        function loadExpense() {
+            const data = getExpenseData();
+            const filterMonth = document.getElementById('expense-month-filter').value;
+            const tbody = document.getElementById('expense-table-body');
+            tbody.innerHTML = '';
+            
+            let tOffice = 0, tPersonal = 0;
+
+            const filtered = data.filter(item => !filterMonth || item.date.startsWith(filterMonth));
+            filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            filtered.forEach(item => {
+                const amt = parseFloat(item.amount) || 0;
+                if (item.type === 'Office') tOffice += amt;
+                else tPersonal += amt;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="text-xs text-gray-500">${item.date}</td>
+                    <td class="font-medium text-gray-800">${item.desc}</td>
+                    <td class="text-center"><span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold ${item.type==='Office'?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700'}">${item.type}</span></td>
+                    <td class="font-bold text-red-600 font-mono">${amt.toFixed(3)}</td>
+                    <td class="text-center no-print"><button onclick="deleteExpense(${item.id})" class="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('exp-total-office').textContent = tOffice.toFixed(3);
+            document.getElementById('exp-total-personal').textContent = tPersonal.toFixed(3);
+            document.getElementById('exp-total-grand').textContent = (tOffice + tPersonal).toFixed(3);
+            lucide.createIcons();
+        }
+
+        function addExpenseEntry() {
+            const date = document.getElementById('exp-date').value;
+            const desc = document.getElementById('exp-desc').value;
+            const type = document.getElementById('exp-type').value;
+            const amount = document.getElementById('exp-amount').value;
+
+            if(!desc || !amount) return;
+
+            const data = getExpenseData();
+            const item = { id: Date.now(), date, desc, type, amount };
+            data.push(item);
+            
+            logSystemActivity('create', 'expense', `Added Expense: ${desc} (${amount})`);
+            localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(data));
+            
+            document.getElementById('exp-desc').value = '';
+            document.getElementById('exp-amount').value = '';
+            loadExpense();
+        }
+
+        function deleteExpense(id) {
+            if(!confirm("Delete expense?")) return;
+            const data = getExpenseData();
+            const index = data.findIndex(i => i.id === id);
+            if(index > -1) {
+                const item = data[index];
+                logSystemActivity('delete', 'expense', `Deleted Expense: ${item.desc}`, null, null, item);
+                data.splice(index, 1);
+                localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(data));
+                loadExpense();
+            }
+        }
+
+        // --- NOTES / TASKS FUNCTIONS ---
+        function loadNotes() {
+            const data = getNotes();
+            const list = document.getElementById('notes-list');
+            if(!list) return;
+            list.innerHTML = '';
+            
+            data.forEach((note, index) => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-gray-50 p-3 rounded border border-gray-200";
+                li.innerHTML = `
+                    <span class="text-sm font-medium text-gray-700">${note.text}</span>
+                    <button onclick="deleteNote(${index})" class="text-gray-400 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                `;
+                list.appendChild(li);
+            });
+            lucide.createIcons();
+        }
+
+        function addNote() {
+            const inp = document.getElementById('note-input');
+            const text = inp.value;
+            if(!text) return;
+            
+            const data = getNotes();
+            const item = { id: Date.now(), text, date: new Date().toISOString() };
+            data.push(item);
+            logSystemActivity('create', 'notes', `Added Task: ${text}`);
+            
+            localStorage.setItem(STORAGE_NOTES, JSON.stringify(data));
+            inp.value = '';
+            loadNotes();
+        }
+
+        function deleteNote(index) {
+            const data = getNotes();
+            const item = data[index];
+            logSystemActivity('delete', 'notes', `Deleted Task: ${item.text}`, null, null, item);
+            data.splice(index, 1);
+            localStorage.setItem(STORAGE_NOTES, JSON.stringify(data));
+            loadNotes();
+        }
+
+        // --- SALAMAIR REMINDER FUNCTIONS ---
+        function loadSalamReminders() {
+            const data = getSalamReminders();
+            const activeList = document.getElementById('salam-active-list');
+            const historyList = document.getElementById('salam-history-list');
+            if(!activeList || !historyList) return;
+            
+            activeList.innerHTML = '';
+            historyList.innerHTML = '';
+            
+            let activeCount = 0;
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            // Sort by Date Ascending
+            data.sort((a,b) => new Date(a.date) - new Date(b.date));
+
+            data.forEach(item => {
+                const fDate = new Date(item.date);
+                fDate.setHours(0,0,0,0);
+                
+                // Determine if history (flight passed)
+                const isHistory = fDate < today;
+                
+                const row = document.createElement('tr');
+                row.className = isHistory ? "bg-gray-50" : "bg-white border-l-4 border-green-500";
+                
+                const dateDisplay = fDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                
+                row.innerHTML = `
+                    <td class="text-xs font-bold ${isHistory?'text-gray-500':'text-green-700'}">${dateDisplay}</td>
+                    <td class="font-mono text-xs font-bold">${item.pnr}</td>
+                    <td class="font-bold text-gray-800 text-sm">${item.name}</td>
+                    <td class="text-xs text-gray-500 italic">${item.remark || '-'}</td>
+                    <td class="text-center">
+                        <button onclick="deleteSalam(${item.id})" class="p-1 text-red-400 hover:text-red-600 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                `;
+
+                if(isHistory) {
+                    historyList.appendChild(row);
+                } else {
+                    activeList.appendChild(row);
+                    activeCount++;
+                }
+            });
+            
+            const emptyMsg = document.getElementById('salam-empty');
+            if(emptyMsg) emptyMsg.style.display = activeCount === 0 ? 'block' : 'none';
+            
+            updateDashboardCheckins(); // Also update dashboard alerts
+            lucide.createIcons();
+        }
+
+        function addSalamReminder() {
+            const pnr = document.getElementById('salam-pnr').value;
+            const name = document.getElementById('salam-name').value;
+            const date = document.getElementById('salam-date').value;
+            const remark = document.getElementById('salam-remark').value;
+            
+            if(!pnr || !name || !date) return alert("Fill required fields");
+
+            const data = getSalamReminders();
+            const item = { id: Date.now(), pnr, name, date, remark };
+            data.push(item);
+            
+            logSystemActivity('create', 'salam', `Added Check-in: ${name} (${pnr})`);
+            localStorage.setItem(STORAGE_SALAM, JSON.stringify(data));
+            
+            // Clear Form
+            document.getElementById('salam-pnr').value = '';
+            document.getElementById('salam-name').value = '';
+            document.getElementById('salam-remark').value = '';
+            
+            loadSalamReminders();
+        }
+
+        function deleteSalam(id) {
+            if(!confirm("Remove this check-in reminder?")) return;
+            const data = getSalamReminders();
+            const index = data.findIndex(i => i.id === id);
+            if(index > -1) {
+                const item = data[index];
+                logSystemActivity('delete', 'salam', `Deleted Check-in: ${item.name}`, null, null, item);
+                data.splice(index, 1);
+                localStorage.setItem(STORAGE_SALAM, JSON.stringify(data));
+                loadSalamReminders();
+            }
+        }
+
+        function toggleSalamHistory() {
+            const el = document.getElementById('salam-history-container');
+            el.classList.toggle('hidden');
+        }
+
+        // --- BACKUP & RESTORE ---
+        function backupData() {
+            const data = {
+                hisab: getHisabData(),
+                due: getDueData(),
+                expense: getExpenseData(),
+                notes: getNotes(),
+                salam: getSalamReminders(),
+                invoices: {}, // Collect invoices
+                logs: JSON.parse(localStorage.getItem(STORAGE_LOG) || '[]')
+            };
+            
+            // Backup invoices
+            for (let i = 0; i < localStorage.length; i++){
+                const key = localStorage.key(i);
+                if (key.startsWith(STORAGE_PREFIX)) {
+                    data.invoices[key] = localStorage.getItem(key);
+                }
+            }
+
+            const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `holiday_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function restoreData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.hisab) localStorage.setItem(STORAGE_HISAB, JSON.stringify(data.hisab));
+                    if (data.due) localStorage.setItem(STORAGE_DUE, JSON.stringify(data.due));
+                    if (data.expense) localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(data.expense));
+                    if (data.notes) localStorage.setItem(STORAGE_NOTES, JSON.stringify(data.notes));
+                    if (data.salam) localStorage.setItem(STORAGE_SALAM, JSON.stringify(data.salam));
+                    if (data.logs) localStorage.setItem(STORAGE_LOG, JSON.stringify(data.logs));
+                    
+                    if (data.invoices) {
+                        for (const key in data.invoices) {
+                            localStorage.setItem(key, data.invoices[key]);
+                        }
+                    }
+                    alert("Data Restored Successfully!");
+                    location.reload();
+                } catch (err) {
+                    alert("Invalid Backup File");
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // --- EXPORT TO EXCEL (CSV) ---
+        function exportHisab(mode) {
+             const data = getHisabData();
+             const filterMonth = document.getElementById('hisab-month-filter').value;
+             const filtered = mode === 'month' ? data.filter(item => !filterMonth || item.date.startsWith(filterMonth)) : data;
+             
+             let csvContent = "data:text/csv;charset=utf-8,Date,Name,PNR,Flight Date,Sector,Net,Sell,Profit,Remark\n";
+             filtered.forEach(row => {
+                 const profit = (parseFloat(row.sell) - parseFloat(row.net)).toFixed(3);
+                 csvContent += `${row.date},${row.name},${row.pnr},${row.flight_date},${row.sector},${row.net},${row.sell},${profit},${row.remark}\n`;
+             });
+             
+             const encodedUri = encodeURI(csvContent);
+             const link = document.createElement("a");
+             link.setAttribute("href", encodedUri);
+             link.setAttribute("download", `ticketing_report_${filterMonth||'all'}.csv`);
+             document.body.appendChild(link);
+             link.click();
+        }
+
+        function exportExpense() {
+             const data = getExpenseData();
+             const filterMonth = document.getElementById('expense-month-filter').value;
+             const filtered = data.filter(item => !filterMonth || item.date.startsWith(filterMonth));
+             
+             let csvContent = "data:text/csv;charset=utf-8,Date,Description,Type,Amount\n";
+             filtered.forEach(row => {
+                 csvContent += `${row.date},${row.desc},${row.type},${row.amount}\n`;
+             });
+             
+             const encodedUri = encodeURI(csvContent);
+             const link = document.createElement("a");
+             link.setAttribute("href", encodedUri);
+             link.setAttribute("download", `expense_report_${filterMonth||'all'}.csv`);
+             document.body.appendChild(link);
+             link.click();
         }
 
         // --- INVOICE LOGIC ---
@@ -1458,6 +2103,8 @@
         updateDashboard(); 
         // Load notes for dashboard
         loadNotes();
+        // ** ADDED: Force SalamAir data load **
+        loadSalamReminders();
 
     </script>
 </body>
