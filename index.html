@@ -120,6 +120,7 @@
             #tab-hisab.active { width: 100%; }
             #tab-expense.active { width: 100%; }
             #tab-notes.active { width: 100%; }
+            #tab-trash.active { width: 100%; }
             
             /* Due Tab Print Styling (Divided Statement Look) */
             #tab-due.active .print-header { display: flex !important; flex-direction: row; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 20px; }
@@ -211,6 +212,10 @@
             </button>
             <button onclick="switchTab('invoice')" id="btn-tab-invoice" class="flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50">
                 <i data-lucide="file-text" class="w-4 h-4"></i> Invoice
+            </button>
+            <!-- RECYCLE BIN TAB -->
+            <button onclick="switchTab('trash')" id="btn-tab-trash" class="flex-1 min-w-[100px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-red-500 hover:bg-red-50 border border-red-100">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Bin
             </button>
         </div>
 
@@ -435,7 +440,6 @@
                         </h2>
                         <div class="flex gap-2">
                             <button onclick="window.print()" class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 hover:bg-gray-700"><i data-lucide="printer" class="w-3 h-3"></i> Print</button>
-                            <button id="btn-undo-due" onclick="undoDeleteDue()" class="hidden bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Undo</button>
                         </div>
                     </div>
                     
@@ -615,6 +619,35 @@
             </div>
         </div>
 
+        <!-- TAB 6: RECYCLE BIN (NEW) -->
+        <div id="tab-trash" class="tab-content">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[210mm] mx-auto">
+                <div class="p-6 bg-red-50 border-b border-red-200 flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-red-800 flex items-center gap-2">
+                        <i data-lucide="trash-2" class="text-red-600"></i> Recycle Bin / History
+                    </h2>
+                    <p class="text-sm text-red-600">Items deleted from any module appear here.</p>
+                </div>
+                <div class="p-6">
+                    <table class="excel-table w-full">
+                        <thead>
+                            <tr>
+                                <th style="width: 10%">Source</th>
+                                <th style="width: 15%">Original Date</th>
+                                <th style="width: 40%">Details / Name</th>
+                                <th style="width: 15%">Amount</th>
+                                <th style="width: 20%">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trash-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                    <div id="trash-empty" class="text-center py-8 text-gray-400 text-sm italic hidden">Recycle Bin is empty.</div>
+                </div>
+            </div>
+        </div>
+
         <!-- TAB 5: INVOICE GENERATOR -->
         <div id="tab-invoice" class="tab-content">
             <!-- Controls -->
@@ -741,6 +774,7 @@
         const STORAGE_NOTES = 'holiday_notes_data';
         const STORAGE_SALAM = 'holiday_salam_data';
         const STORAGE_SALAM_HISTORY = 'holiday_salam_history';
+        const STORAGE_TRASH = 'holiday_trash_data';
         let dueViewMode = 'active'; 
         
         lucide.createIcons();
@@ -797,10 +831,18 @@
                 btn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-gray-600 hover:bg-gray-50";
             });
             
+            // Special styling for Trash Tab button
+            const trashBtn = document.getElementById('btn-tab-trash');
+            if (trashBtn) trashBtn.className = "flex-1 min-w-[100px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all text-red-500 hover:bg-red-50 border border-red-100";
+
             // Activate current button
             const currentBtn = document.getElementById(`btn-tab-${tabName}`);
             if(currentBtn) {
-                currentBtn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md";
+                if (tabName === 'trash') {
+                    currentBtn.className = "flex-1 min-w-[100px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-red-600 text-white shadow-md";
+                } else {
+                    currentBtn.className = "flex-1 min-w-[120px] py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all bg-gray-900 text-white shadow-md";
+                }
             }
 
             if(tabName === 'hisab') loadHisab();
@@ -808,11 +850,138 @@
             if(tabName === 'due') loadDueData();
             if(tabName === 'expense') loadExpense();
             if(tabName === 'notes') loadNotes(); 
+            if(tabName === 'trash') loadTrash();
             if(tabName === 'invoice') {
                 const tbody = document.getElementById('items-table-body');
                 if(tbody && tbody.children.length === 0) window.addRow();
             }
         }
+
+        // --- TRASH SYSTEM LOGIC ---
+        function getTrashData() {
+            return JSON.parse(localStorage.getItem(STORAGE_TRASH) || '[]');
+        }
+
+        function addToTrash(item, source) {
+            const trash = getTrashData();
+            // Add metadata
+            item.deletedSource = source;
+            item.deletedDate = new Date().toISOString();
+            trash.push(item);
+            localStorage.setItem(STORAGE_TRASH, JSON.stringify(trash));
+        }
+
+        function restoreTrashItem(id) {
+            const trash = getTrashData();
+            const index = trash.findIndex(i => i.id === id);
+            if (index === -1) return;
+
+            const item = trash[index];
+            const source = item.deletedSource;
+
+            // Remove metadata before restoring
+            delete item.deletedSource;
+            delete item.deletedDate;
+
+            // Restore based on source
+            if (source === 'hisab') {
+                const data = getHisabData();
+                data.push(item);
+                localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
+                showMessage("Restored to Ticketing");
+            } else if (source === 'notes') {
+                const data = getNotes();
+                data.push(item);
+                localStorage.setItem(STORAGE_NOTES, JSON.stringify(data));
+                showMessage("Restored to Notes");
+            } else if (source === 'salam') {
+                const data = getSalamReminders();
+                data.push(item);
+                localStorage.setItem(STORAGE_SALAM, JSON.stringify(data));
+                showMessage("Restored to Check-in");
+            } else if (source === 'due') {
+                const data = getDueData();
+                data.push(item);
+                localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
+                showMessage("Restored to Due/Bank");
+            } else if (source === 'expense') {
+                const data = getExpenseData();
+                data.push(item);
+                localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(data));
+                showMessage("Restored to Expenses");
+            }
+
+            // Remove from trash
+            trash.splice(index, 1);
+            localStorage.setItem(STORAGE_TRASH, JSON.stringify(trash));
+            loadTrash();
+        }
+
+        function permanentDeleteTrashItem(id) {
+            if(!confirm("Are you sure? This cannot be undone.")) return;
+            const trash = getTrashData();
+            const newTrash = trash.filter(i => i.id !== id);
+            localStorage.setItem(STORAGE_TRASH, JSON.stringify(newTrash));
+            loadTrash();
+        }
+
+        function loadTrash() {
+            const tbody = document.getElementById('trash-table-body');
+            const trash = getTrashData();
+            tbody.innerHTML = '';
+
+            if (trash.length === 0) {
+                document.getElementById('trash-empty').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('trash-empty').classList.add('hidden');
+
+            // Sort by deleted date desc
+            trash.sort((a,b) => new Date(b.deletedDate) - new Date(a.deletedDate));
+
+            trash.forEach(item => {
+                const row = document.createElement('tr');
+                
+                // Determine display details based on source
+                let details = '';
+                let amount = '-';
+                let sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-gray-200 text-gray-700 uppercase">${item.deletedSource}</span>`;
+
+                if (item.deletedSource === 'hisab') {
+                    details = `${item.name} (${item.pnr || '-'}) - ${item.sector}`;
+                    amount = item.sell;
+                    sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700 uppercase">Ticketing</span>`;
+                } else if (item.deletedSource === 'notes') {
+                    details = item.text;
+                    sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-yellow-100 text-yellow-700 uppercase">Note</span>`;
+                } else if (item.deletedSource === 'salam') {
+                    details = `${item.name} (${item.pnr}) - Flight: ${item.date}`;
+                    sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700 uppercase">Check-in</span>`;
+                } else if (item.deletedSource === 'due') {
+                    details = `${item.type === 'bank' ? item.bankName : item.name} (${item.status})`;
+                    amount = item.amount;
+                    sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700 uppercase">Due/Bank</span>`;
+                } else if (item.deletedSource === 'expense') {
+                    details = `${item.desc} (${item.type})`;
+                    amount = item.amount;
+                    sourceLabel = `<span class="px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-700 uppercase">Expense</span>`;
+                }
+
+                row.innerHTML = `
+                    <td class="text-center">${sourceLabel}</td>
+                    <td class="text-xs text-gray-500">${new Date(item.deletedDate).toLocaleString()}</td>
+                    <td class="font-medium text-sm text-gray-700">${details}</td>
+                    <td class="font-mono text-sm">${amount !== '-' ? parseFloat(amount).toFixed(3) : '-'}</td>
+                    <td class="text-center">
+                        <button onclick="restoreTrashItem(${item.id})" class="text-green-600 hover:text-green-800 font-bold text-xs mr-3"><i data-lucide="rotate-ccw" class="w-4 h-4 inline"></i> Restore</button>
+                        <button onclick="permanentDeleteTrashItem(${item.id})" class="text-red-500 hover:text-red-700 font-bold text-xs"><i data-lucide="trash-2" class="w-4 h-4 inline"></i> Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
 
         // --- INVOICE LOGIC ---
         const invoiceNumberElement = document.getElementById('invoice-number');
@@ -1229,14 +1398,22 @@
 
         function deleteHisabEntry(id) {
             event.stopPropagation();
-            if(!confirm('Delete this entry?')) return;
+            if(!confirm('Delete this entry? It will be moved to the Recycle Bin.')) return;
             
-            const data = getHisabData().filter(e => e.id !== id);
-            localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
+            const data = getHisabData();
+            const item = data.find(e => e.id === id);
             
-            if(document.getElementById('h-edit-id').value == id) cancelEdit();
-            
-            loadHisab();
+            if (item) {
+                // Move to trash
+                addToTrash(item, 'hisab');
+                
+                // Remove from active list
+                const newData = data.filter(e => e.id !== id);
+                localStorage.setItem(STORAGE_HISAB, JSON.stringify(newData));
+                
+                if(document.getElementById('h-edit-id').value == id) cancelEdit();
+                loadHisab();
+            }
         }
 
         function loadHisab() {
@@ -1363,10 +1540,17 @@
         }
 
         function deleteExpenseEntry(id) {
-            if(!confirm('Delete this expense?')) return;
-            const data = getExpenseData().filter(e => e.id !== id);
-            localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(data));
-            loadExpense();
+            if(!confirm('Delete this expense? It will be moved to the Recycle Bin.')) return;
+            
+            const data = getExpenseData();
+            const item = data.find(e => e.id === id);
+            
+            if(item) {
+                addToTrash(item, 'expense');
+                const newData = data.filter(e => e.id !== id);
+                localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(newData));
+                loadExpense();
+            }
         }
 
         function loadExpense() {
@@ -1534,35 +1718,22 @@
             }
         }
 
-        let lastDeletedDue = null;
-
+        // Replaced lastDeletedDue logic with full trash system
         function deleteDueItem(id) {
-            if(!confirm('Delete this item?')) return;
+            if(!confirm('Delete this item? It will be moved to the Recycle Bin.')) return;
             const data = getDueData();
             const itemIndex = data.findIndex(e => e.id === id);
             if (itemIndex > -1) {
-                lastDeletedDue = data[itemIndex]; 
+                addToTrash(data[itemIndex], 'due');
                 data.splice(itemIndex, 1);
                 localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
                 loadDueData();
-                
-                const btn = document.getElementById('btn-undo-due');
-                if(btn) {
-                    btn.classList.remove('hidden');
-                    setTimeout(() => { btn.classList.add('hidden'); lastDeletedDue = null; }, 8000);
-                }
             }
         }
 
         function undoDeleteDue() {
-            if (!lastDeletedDue) return;
-            const data = getDueData();
-            data.push(lastDeletedDue);
-            localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
-            loadDueData();
-            const btn = document.getElementById('btn-undo-due');
-            if(btn) btn.classList.add('hidden');
-            lastDeletedDue = null;
+            // Deprecated - Use Recycle Bin
+            alert("Please use the Recycle Bin tab to restore items.");
         }
 
         function loadDueData() {
@@ -2017,9 +2188,14 @@
         }
 
         function deleteNote(id) {
-            const notes = getNotes().filter(n => n.id !== id);
-            localStorage.setItem(STORAGE_NOTES, JSON.stringify(notes));
-            loadGeneralNotes();
+            const notes = getNotes();
+            const item = notes.find(n => n.id === id);
+            if(item) {
+                addToTrash(item, 'notes');
+                const newNotes = notes.filter(n => n.id !== id);
+                localStorage.setItem(STORAGE_NOTES, JSON.stringify(newNotes));
+                loadGeneralNotes();
+            }
         }
 
         function loadGeneralNotes() {
@@ -2142,20 +2318,26 @@
         }
 
         function deleteSalamReminder(id) {
-            if(!confirm("Delete this reminder?")) return;
-            const reminders = getSalamReminders().filter(r => r.id !== id);
-            localStorage.setItem(STORAGE_SALAM, JSON.stringify(reminders));
+            if(!confirm("Delete this reminder? It will be moved to Recycle Bin.")) return;
+            const reminders = getSalamReminders();
+            const item = reminders.find(r => r.id === id);
             
-            if(document.getElementById('salam-edit-id').value == id) {
-                 document.getElementById('salam-edit-id').value = '';
-                 document.getElementById('btn-salam-add').textContent = "Track Check-in";
-                 ['salam-pnr','salam-name','salam-date','salam-remark'].forEach(i => document.getElementById(i).value='');
+            if(item) {
+                addToTrash(item, 'salam');
+                const newReminders = reminders.filter(r => r.id !== id);
+                localStorage.setItem(STORAGE_SALAM, JSON.stringify(newReminders));
+                
+                if(document.getElementById('salam-edit-id').value == id) {
+                     document.getElementById('salam-edit-id').value = '';
+                     document.getElementById('btn-salam-add').textContent = "Track Check-in";
+                     ['salam-pnr','salam-name','salam-date','salam-remark'].forEach(i => document.getElementById(i).value='');
+                }
+                loadSalamReminders();
             }
-            loadSalamReminders();
         }
 
         function deleteSalamHistory(id) {
-            if(!confirm("Delete this history record?")) return;
+            if(!confirm("Delete this history record permanently?")) return;
             const history = getSalamHistory().filter(r => r.id !== id);
             localStorage.setItem(STORAGE_SALAM_HISTORY, JSON.stringify(history));
             loadSalamHistory();
