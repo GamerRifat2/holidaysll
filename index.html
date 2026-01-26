@@ -273,7 +273,7 @@
                 <!-- ROW 1: YEARLY TOTALS -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-white border-b border-gray-200">
                     <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl border border-green-200 shadow-sm">
-                        <div class="text-green-600 font-bold uppercase text-xs tracking-wider mb-1">Total Sell (Year)</div>
+                        <div class="text-green-600 font-bold uppercase text-xs tracking-wider mb-1">Total Sale (Year)</div>
                         <div class="text-3xl font-black text-gray-800" id="dash-total-sell">0.000</div>
                         <div class="text-xs text-green-700 mt-1">OMR</div>
                     </div>
@@ -294,7 +294,7 @@
                     <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4"></i> Monthly Performance</h3>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="bg-white p-4 rounded-xl border border-green-200 shadow-sm">
-                            <div class="text-green-600 font-bold uppercase text-[10px] tracking-wider mb-1">This Month Sell</div>
+                            <div class="text-green-600 font-bold uppercase text-[10px] tracking-wider mb-1">This Month Sale</div>
                             <div class="text-2xl font-black text-gray-800" id="dash-month-sell">0.000</div>
                         </div>
                         <div class="bg-white p-4 rounded-xl border border-blue-200 shadow-sm">
@@ -302,7 +302,7 @@
                             <div class="text-2xl font-black text-gray-800" id="dash-month-profit">0.000</div>
                         </div>
                         <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm opacity-80">
-                            <div class="text-gray-500 font-bold uppercase text-[10px] tracking-wider mb-1">Last Month Sell</div>
+                            <div class="text-gray-500 font-bold uppercase text-[10px] tracking-wider mb-1">Last Month Sale</div>
                             <div class="text-xl font-black text-gray-600" id="dash-last-month-sell">0.000</div>
                         </div>
                         <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm opacity-80">
@@ -334,7 +334,7 @@
                      </div>
 
                      <!-- SECTION 2: SALAMAIR CHECK-IN TRACKER -->
-                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" id="salam-section">
                         <div class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                             <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i data-lucide="plane" class="text-green-600"></i> SalamAir Check-in Tracker</h2>
                             <div>
@@ -858,7 +858,7 @@
             if(tabName === 'hisab') loadHisab();
             if(tabName === 'dashboard') {
                 updateDashboard();
-                loadNotes(); // Load notes when dashboard is active (merged tab)
+                loadNotes(); 
             }
             if(tabName === 'due') loadDueData();
             if(tabName === 'expense') loadExpense();
@@ -891,7 +891,7 @@
         }
 
         function openLogModal(source) {
-            currentTrashSource = source; // Reusing this var for filter context
+            currentTrashSource = source; 
             const titles = {
                 'hisab': 'Ticketing History',
                 'notes': 'Notes History',
@@ -916,10 +916,8 @@
             let logs = JSON.parse(localStorage.getItem(STORAGE_LOG) || '[]');
             
             if (currentTrashSource) {
-                // Keep logs that DO NOT match the current source (filter out current source logs)
                 logs = logs.filter(item => item.source !== currentTrashSource);
             } else {
-                // Fallback: Clear all if no source context (though UI prevents this mostly)
                 logs = [];
             }
             
@@ -1042,6 +1040,152 @@
                 });
             }
             lucide.createIcons();
+        }
+
+        // --- DASHBOARD LOGIC ---
+        function updateDashboard() {
+            const data = getHisabData();
+            const dueData = getDueData(); // Get dues for dashboard
+            
+            // Calculate Aggregates
+            let yearSell = 0, yearProfit = 0;
+            let monthSell = 0, monthProfit = 0;
+            let lastMonthSell = 0, lastMonthProfit = 0;
+
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth(); // 0-11
+
+            // Calculate Last Month (handling year rollover)
+            let lastMonthIndex = currentMonth - 1;
+            let lastMonthYear = currentYear;
+            if (lastMonthIndex < 0) {
+                lastMonthIndex = 11;
+                lastMonthYear -= 1;
+            }
+
+            data.forEach(item => {
+                if (!item.date) return;
+                
+                // Parse date & values safely - Using String Split to avoid timezone issues
+                const parts = item.date.split('-'); // YYYY-MM-DD
+                if (parts.length !== 3) return;
+                
+                const iYear = parseInt(parts[0]);
+                const iMonth = parseInt(parts[1]) - 1; // 0-11
+                
+                // Fallback for sale/sell property name
+                const sellVal = parseFloat(item.sell || item.sale) || 0;
+                const netVal = parseFloat(item.net) || 0;
+                const profit = sellVal - netVal;
+                
+                // 1. Yearly Stats (Current Year)
+                if (iYear === currentYear) {
+                    yearSell += sellVal;
+                    yearProfit += profit;
+                }
+
+                // 2. This Month Stats
+                if (iYear === currentYear && iMonth === currentMonth) {
+                    monthSell += sellVal;
+                    monthProfit += profit;
+                }
+
+                // 3. Last Month Stats
+                if (iYear === lastMonthYear && iMonth === lastMonthIndex) {
+                    lastMonthSell += sellVal;
+                    lastMonthProfit += profit;
+                }
+            });
+            
+            // Calculate Total Due from Due & Banking tab
+            let totalDue = 0;
+            dueData.forEach(item => {
+                const amt = parseFloat(item.amount) || 0;
+                if (item.type === 'customer' && (item.status === 'Pending' || item.status === 'Urgent')) {
+                    totalDue += amt;
+                }
+            });
+
+            // Update UI
+            const tSell = document.getElementById('dash-total-sell'); if(tSell) tSell.textContent = yearSell.toFixed(3);
+            const tProf = document.getElementById('dash-total-profit'); if(tProf) tProf.textContent = yearProfit.toFixed(3);
+            const tDue = document.getElementById('dash-total-due'); if(tDue) tDue.textContent = totalDue.toFixed(3);
+
+            const mSell = document.getElementById('dash-month-sell'); if(mSell) mSell.textContent = monthSell.toFixed(3);
+            const mProf = document.getElementById('dash-month-profit'); if(mProf) mProf.textContent = monthProfit.toFixed(3);
+            
+            const lmSell = document.getElementById('dash-last-month-sell'); if(lmSell) lmSell.textContent = lastMonthSell.toFixed(3);
+            const lmProf = document.getElementById('dash-last-month-profit'); if(lmProf) lmProf.textContent = lastMonthProfit.toFixed(3);
+            
+            // CHECK-IN ALERTS
+            updateDashboardCheckins();
+        }
+
+        function updateDashboardCheckins() {
+            const reminders = getSalamReminders(); 
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            
+            const urgent = [];
+            
+            reminders.forEach(r => {
+                const flightDate = new Date(r.date);
+                flightDate.setHours(0,0,0,0);
+                
+                if (flightDate.getTime() === today.getTime() || flightDate.getTime() === tomorrow.getTime()) {
+                    urgent.push(r);
+                }
+            });
+            
+            const alertBox = document.getElementById('dashboard-alerts');
+            if (!alertBox) return;
+
+            if (urgent.length > 0) {
+                alertBox.classList.remove('hidden');
+                let html = `
+                <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r shadow-sm">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center">
+                            <i data-lucide="bell-ring" class="h-6 w-6 text-amber-600 mr-3 animate-pulse"></i>
+                            <div>
+                                <h3 class="text-lg font-bold text-amber-900">Urgent Check-ins Needed (${urgent.length})</h3>
+                                <p class="text-sm text-amber-700">Passengers flying within 48 hours.</p>
+                            </div>
+                        </div>
+                        <button onclick="switchTab('notes')" class="bg-amber-600 text-white text-xs px-4 py-1.5 rounded-lg font-bold hover:bg-amber-700 shadow-sm transition-colors">
+                            Go to Check-in
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">`;
+                    
+                urgent.forEach(r => {
+                     const fDate = new Date(r.date);
+                     fDate.setHours(0,0,0,0);
+                     const isToday = fDate.getTime() === today.getTime();
+                     const badge = isToday 
+                        ? `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-red-200">Flight Today</span>` 
+                        : `<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-blue-200">Tomorrow</span>`;
+                     
+                     html += `
+                      <div class="flex justify-between items-center bg-white p-2.5 rounded border border-amber-100 shadow-sm">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-gray-800 text-sm">${r.name}</span>
+                            <span class="font-mono text-xs text-gray-500">PNR: ${r.pnr}</span>
+                        </div>
+                        ${badge}
+                      </div>`;
+                });
+                
+                html += `</div></div>`;
+                alertBox.innerHTML = html;
+                lucide.createIcons();
+            } else {
+                alertBox.classList.add('hidden');
+                alertBox.innerHTML = '';
+            }
         }
 
         // --- INVOICE LOGIC ---
@@ -1303,1001 +1447,6 @@
                 }
             }
         }
-
-        // --- LEDGER LOGIC ---
-        function getHisabData() {
-            const raw = localStorage.getItem(STORAGE_HISAB);
-            return raw ? JSON.parse(raw) : [];
-        }
-
-        function updateHisabTransaction(id, updatedEntry) {
-            const data = getHisabData();
-            const index = data.findIndex(e => e.id === parseInt(id));
-            if (index !== -1) {
-                // Log Edit
-                const oldVal = data[index].sell;
-                const newVal = updatedEntry.sell;
-                if(oldVal !== newVal) {
-                    logSystemActivity('edit', 'hisab', `Updated Ticket for ${data[index].name}`, oldVal, newVal);
-                } else if (JSON.stringify(data[index]) !== JSON.stringify({...data[index], ...updatedEntry})) {
-                     logSystemActivity('edit', 'hisab', `Updated details for ${data[index].name}`, null, null);
-                }
-
-                data[index] = { ...data[index], ...updatedEntry }; 
-                localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
-                loadHisab();
-                cancelEdit(); 
-            }
-        }
-
-        function addHisabTransaction(entry) {
-            const data = getHisabData();
-            // Log Create
-            logSystemActivity('create', 'hisab', `Added Ticket: ${entry.name}`, null, null, entry);
-
-            if(entry.invoiceId) {
-                const exists = data.findIndex(e => e.invoiceId === entry.invoiceId);
-                if(exists > -1) {
-                    const old = data[exists];
-                    entry.net = old.net > 0 ? old.net : entry.net; 
-                    data[exists] = { ...old, ...entry, id: old.id };
-                } else {
-                    entry.id = Date.now();
-                    data.push(entry);
-                }
-            } else {
-                entry.id = Date.now();
-                data.push(entry);
-            }
-            localStorage.setItem(STORAGE_HISAB, JSON.stringify(data));
-            loadHisab();
-        }
-
-        function addHisabEntry() {
-            let dateEl = document.getElementById('h-date');
-            let date = dateEl.value;
-
-            if (!date) {
-                const today = new Date();
-                const d = String(today.getDate()).padStart(2, '0');
-                const m = String(today.getMonth() + 1).padStart(2, '0');
-                const y = today.getFullYear();
-                date = `${y}-${m}-${d}`;
-                dateEl.value = date;
-            }
-
-            const name = document.getElementById('h-name').value;
-            const pnr = document.getElementById('h-pnr').value;
-            const fdate = document.getElementById('h-fdate').value || date;
-            const sector = document.getElementById('h-sector').value;
-            const phone = document.getElementById('h-phone').value;
-            const net = parseFloat(document.getElementById('h-net').value) || 0;
-            const sell = parseFloat(document.getElementById('h-sell').value) || 0;
-            const remark = document.getElementById('h-remark').value;
-
-            if(!name) return alert('Name is required');
-
-            const entryData = {
-                date: date, name: name, pnr: pnr, flight_date: fdate,
-                sector: sector, phone: phone, net: net, sell: sell, remark: remark
-            };
-
-            const editId = document.getElementById('h-edit-id').value;
-            
-            if (editId) {
-                updateHisabTransaction(editId, entryData);
-            } else {
-                addHisabTransaction({ ...entryData, invoiceId: null });
-                ['h-name','h-pnr','h-fdate','h-sector','h-phone','h-net','h-sell','h-remark'].forEach(id => document.getElementById(id).value = '');
-                document.getElementById('h-name').focus();
-            }
-        }
-
-        function generateInvoiceFromLedger(id) {
-            event.stopPropagation();
-            const data = getHisabData().find(e => e.id === id);
-            if (!data) return alert("Transaction not found");
-
-            switchTab('invoice');
-
-            if (data.date) {
-                const parts = data.date.split('-');
-                if(parts.length === 3) {
-                    const invDate = document.getElementById('invoice-date');
-                    if(invDate) invDate.textContent = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
-            }
-            
-            document.getElementById('customer-name').innerText = data.name || "Customer Name";
-            document.getElementById('customer-phone').innerText = data.phone || "";
-
-            const tbody = document.getElementById('items-table-body');
-            if(tbody) tbody.innerHTML = ''; 
-
-            let desc = "Air Ticket";
-            if (data.sector) desc += ` / ${data.sector}`;
-            if (data.pnr) desc += ` (PNR: ${data.pnr})`;
-            if (data.flight_date) desc += ` - Travel Date: ${data.flight_date}`;
-
-            window.addRow(desc, data.sell.toFixed(3));
-            alert("Invoice Generated from Ledger!");
-        }
-
-        function editRow(id) {
-            const data = getHisabData().find(e => e.id === id);
-            if(!data) return;
-
-            document.getElementById('h-date').value = data.date;
-            document.getElementById('h-name').value = data.name;
-            document.getElementById('h-pnr').value = data.pnr || '';
-            document.getElementById('h-fdate').value = data.flight_date || '';
-            document.getElementById('h-sector').value = data.sector || '';
-            document.getElementById('h-phone').value = data.phone || '';
-            document.getElementById('h-net').value = data.net;
-            document.getElementById('h-sell').value = data.sell;
-            document.getElementById('h-remark').value = data.remark || '';
-
-            document.getElementById('h-edit-id').value = id;
-            
-            const btn = document.getElementById('btn-add-update');
-            btn.textContent = "UPDATE";
-            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-            btn.classList.add('bg-orange-500', 'hover:bg-orange-600');
-            
-            document.getElementById('btn-cancel-edit').classList.remove('hidden');
-            
-            document.querySelectorAll('.excel-table tr').forEach(r => r.classList.remove('row-selected'));
-            const row = document.querySelector(`tr[data-id="${id}"]`);
-            if(row) row.classList.add('row-selected');
-            
-            const form = document.querySelector('.px-6.py-4');
-            if(form) form.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function cancelEdit() {
-            document.getElementById('h-edit-id').value = '';
-            
-            const btn = document.getElementById('btn-add-update');
-            btn.textContent = "ADD";
-            btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-            btn.classList.remove('bg-orange-500', 'hover:bg-orange-600');
-            
-            document.getElementById('btn-cancel-edit').classList.add('hidden');
-            document.querySelectorAll('.excel-table tr').forEach(r => r.classList.remove('row-selected'));
-            
-            // Clear inputs BUT KEEP DATE
-            ['h-name','h-pnr','h-fdate','h-sector','h-phone','h-net','h-sell','h-remark'].forEach(id => document.getElementById(id).value = '');
-        }
-
-        function deleteHisabEntry(id) {
-            event.stopPropagation();
-            if(!confirm('Delete this entry? It will be moved to the Log (Trash).')) return;
-            
-            const data = getHisabData();
-            const item = data.find(e => e.id === id);
-            
-            if (item) {
-                // Log Delete
-                logSystemActivity('delete', 'hisab', `Deleted Ticket: ${item.name}`, null, null, item);
-                
-                const newData = data.filter(e => e.id !== id);
-                localStorage.setItem(STORAGE_HISAB, JSON.stringify(newData));
-                
-                if(document.getElementById('h-edit-id').value == id) cancelEdit();
-                loadHisab();
-            }
-        }
-
-        function loadHisab() {
-            const filterEl = document.getElementById('hisab-month-filter');
-            if(!filterEl) return;
-            const selectedMonth = filterEl.value;
-            const [y, m] = selectedMonth.split('-');
-            const dateObj = new Date(parseInt(y), parseInt(m)-1);
-            
-            const headerDate = document.getElementById('sheet-header-date');
-            if(headerDate) headerDate.textContent = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-            const allData = getHisabData();
-            const data = allData.filter(e => e.date.startsWith(selectedMonth));
-            
-            data.sort((a, b) => a.date.localeCompare(b.date));
-
-            const tbody = document.getElementById('hisab-table-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-
-            let tNet = 0, tSell = 0, tProfit = 0;
-
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11" class="p-8 text-center text-gray-400 italic">No transactions found for this month.</td></tr>';
-            } else {
-                data.forEach(item => {
-                    const profit = item.sell - item.net;
-                    tNet += item.net;
-                    tSell += item.sell;
-                    tProfit += profit;
-
-                    const row = document.createElement('tr');
-                    row.setAttribute('data-id', item.id);
-                    row.onclick = () => editRow(item.id); 
-                    
-                    const displayDate = formatDateSafe(item.date);
-                    const fDateDisplay = item.flight_date ? formatDateSafe(item.flight_date) : '-';
-
-                    row.innerHTML = `
-                        <td class="text-center text-sm">${displayDate}</td>
-                        <td class="font-bold text-gray-700 text-sm" title="${item.name}">${item.name}</td>
-                        <td class="text-center text-sm font-mono">${item.pnr || '-'}</td>
-                        <td class="text-center text-sm">${fDateDisplay}</td>
-                        <td class="text-right text-red-600 text-sm">${item.net.toFixed(3)}</td>
-                        <td class="text-right text-green-700 font-bold text-sm">${item.sell.toFixed(3)}</td>
-                        <td class="text-right text-blue-800 bg-blue-50 font-bold text-sm">${profit.toFixed(3)}</td>
-                        <td class="text-sm text-center">${item.sector || '-'}</td>
-                        <td class="text-sm text-center">${item.phone || '-'}</td>
-                        <td class="text-sm text-center text-gray-500 italic">${item.remark || '-'}</td>
-                        <td class="text-center no-print flex gap-1 justify-center items-center h-full">
-                             <button onclick="addToSalamCheckin(${item.id})" class="text-green-500 hover:text-green-700 p-1" title="Add to Check-in"><i data-lucide="user-check" class="w-3 h-3"></i></button>
-                            <button onclick="generateInvoiceFromLedger(${item.id})" class="text-blue-500 hover:text-blue-700 p-1" title="Generate Invoice"><i data-lucide="file-text" class="w-3 h-3"></i></button>
-                            <button onclick="deleteHisabEntry(${item.id})" class="text-gray-400 hover:text-red-500 p-1" title="Delete"><i data-lucide="x" class="w-3 h-3"></i></button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            }
-
-            const tNetEl = document.getElementById('tot-net'); if(tNetEl) tNetEl.textContent = tNet.toFixed(3);
-            const tSellEl = document.getElementById('tot-sell'); if(tSellEl) tSellEl.textContent = tSell.toFixed(3);
-            const tProfitEl = document.getElementById('tot-profit'); if(tProfitEl) tProfitEl.textContent = tProfit.toFixed(3);
-            
-            lucide.createIcons();
-        }
-
-        function exportHisab(mode = 'month') {
-            const selectedMonth = document.getElementById('hisab-month-filter').value;
-            let data;
-            let filename;
-
-            if (mode === 'all') {
-                data = getHisabData();
-                filename = `HolidayTravels_Ledger_Full.csv`;
-            } else {
-                data = getHisabData().filter(e => e.date.startsWith(selectedMonth));
-                filename = `Ledger_${selectedMonth}.csv`;
-            }
-            
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Date,Name,PNR,FlightDate,Sector,Phone,Net(Cost),Sell,Profit,Remark\n";
-
-            data.sort((a, b) => a.date.localeCompare(b.date));
-
-            data.forEach(e => {
-                const profit = e.sell - e.net;
-                const safeName = e.name.replace(/,/g, ' '); 
-                const safePnr = (e.pnr || '').replace(/,/g, ' ');
-                const safeRemark = (e.remark || '').replace(/,/g, ' ');
-                csvContent += `${e.date},${safeName},${safePnr},${e.flight_date || ''},${e.sector || ''},${e.phone || ''},${e.net},${e.sell},${profit},${safeRemark}\n`;
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", filename);
-            document.body.appendChild(link);
-            link.click();
-        }
-
-        // --- EXPENSE LOGIC ---
-        function getExpenseData() {
-            const raw = localStorage.getItem(STORAGE_EXPENSE);
-            return raw ? JSON.parse(raw) : [];
-        }
-
-        function addExpenseEntry() {
-            const date = document.getElementById('exp-date').value;
-            const desc = document.getElementById('exp-desc').value;
-            const type = document.getElementById('exp-type').value;
-            const amount = parseFloat(document.getElementById('exp-amount').value) || 0;
-
-            if(!date || !desc || amount === 0) return alert('Please fill all fields');
-
-            const data = getExpenseData();
-            const item = { id: Date.now(), date, desc, type, amount };
-            
-            // Log Create
-            logSystemActivity('create', 'expense', `Added Expense: ${desc}`, null, null, item);
-
-            data.push(item);
-            localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(data));
-            
-            // Reset
-            document.getElementById('exp-desc').value = '';
-            document.getElementById('exp-amount').value = '';
-            loadExpense();
-        }
-
-        function deleteExpenseEntry(id) {
-            if(!confirm('Delete this expense?')) return;
-            
-            const data = getExpenseData();
-            const item = data.find(e => e.id === id);
-            
-            if(item) {
-                // Log Delete
-                logSystemActivity('delete', 'expense', `Deleted Expense: ${item.desc}`, null, null, item);
-                
-                const newData = data.filter(e => e.id !== id);
-                localStorage.setItem(STORAGE_EXPENSE, JSON.stringify(newData));
-                loadExpense();
-            }
-        }
-
-        function loadExpense() {
-            const filterEl = document.getElementById('expense-month-filter');
-            if(!filterEl) return;
-            const selectedMonth = filterEl.value;
-            
-            const allData = getExpenseData();
-            const data = allData.filter(e => e.date.startsWith(selectedMonth));
-            data.sort((a, b) => a.date.localeCompare(b.date));
-
-            const tbody = document.getElementById('expense-table-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-
-            let officeTotal = 0, personalTotal = 0;
-
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-400 italic">No expenses found for this month.</td></tr>';
-            } else {
-                data.forEach(item => {
-                    if (item.type === 'Office') officeTotal += item.amount;
-                    else personalTotal += item.amount;
-
-                    const row = document.createElement('tr');
-                    const displayDate = formatDateSafe(item.date);
-                    const badgeClass = item.type === 'Office' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
-
-                    row.innerHTML = `
-                        <td class="text-center text-sm">${displayDate}</td>
-                        <td class="text-sm">${item.desc}</td>
-                        <td class="text-center"><span class="px-2 py-1 rounded text-xs font-bold ${badgeClass}">${item.type}</span></td>
-                        <td class="text-right font-mono text-sm">${item.amount.toFixed(3)}</td>
-                        <td class="text-center no-print"><button onclick="deleteExpenseEntry(${item.id})" class="text-gray-400 hover:text-red-500"><i data-lucide="x" class="w-3 h-3"></i></button></td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            }
-
-            const expOff = document.getElementById('exp-total-office'); if(expOff) expOff.textContent = officeTotal.toFixed(3);
-            const expPer = document.getElementById('exp-total-personal'); if(expPer) expPer.textContent = personalTotal.toFixed(3);
-            const expGrand = document.getElementById('exp-total-grand'); if(expGrand) expGrand.textContent = (officeTotal + personalTotal).toFixed(3);
-            lucide.createIcons();
-        }
-
-        function exportExpense() {
-            const selectedMonth = document.getElementById('expense-month-filter').value;
-            const data = getExpenseData().filter(e => e.date.startsWith(selectedMonth));
-            let csvContent = "data:text/csv;charset=utf-8,Date,Description,Type,Amount\n";
-            
-            data.forEach(e => {
-                csvContent += `${e.date},"${e.desc}",${e.type},${e.amount}\n`;
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Expenses_${selectedMonth}.csv`);
-            document.body.appendChild(link);
-            link.click();
-        }
-
-        // --- DUE & BANKING LOGIC ---
-        function setDueView(mode) {
-            dueViewMode = mode;
-            const activeBtn = document.getElementById('btn-due-active');
-            const historyBtn = document.getElementById('btn-due-history');
-            const activeView = document.getElementById('due-active-view');
-            const historyView = document.getElementById('due-history-view');
-
-            if (mode === 'active') {
-                if(activeBtn) activeBtn.className = "px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all";
-                if(historyBtn) historyBtn.className = "px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all";
-                if(activeView) activeView.classList.remove('hidden');
-                if(historyView) historyView.classList.add('hidden');
-            } else {
-                if(historyBtn) historyBtn.className = "px-6 py-1.5 rounded-md text-sm font-bold bg-white text-gray-800 shadow-sm transition-all";
-                if(activeBtn) activeBtn.className = "px-6 py-1.5 rounded-md text-sm font-bold text-gray-600 hover:bg-gray-300 transition-all";
-                if(historyView) historyView.classList.remove('hidden');
-                if(activeView) activeView.classList.add('hidden');
-            }
-            loadDueData();
-        }
-
-        function getDueData() {
-            const raw = localStorage.getItem(STORAGE_DUE);
-            return raw ? JSON.parse(raw) : [];
-        }
-
-        function addDueRow(type) {
-            const data = getDueData();
-            const newItem = {
-                id: Date.now(),
-                type: type, // 'customer', 'payable', 'bank'
-                name: '', // Empty for placeholder
-                phone: '', 
-                bankName: '', // Empty for placeholder
-                amount: '', // Empty for placeholder
-                date: new Date().toISOString().split('T')[0],
-                status: 'Pending',
-                paymentDate: '',
-                notes: '' // Initialize notes
-            };
-            
-            // Log Create
-            logSystemActivity('create', 'due', `Added ${type} row`, null, null, newItem);
-
-            data.push(newItem);
-            localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
-            loadDueData();
-        }
-
-        function updateDueItem(id, field, value) {
-            const data = getDueData();
-            const index = data.findIndex(e => e.id === id);
-            if(index !== -1) {
-                
-                // PARTIAL PAYMENT LOGIC
-                if (field === 'status' && value === 'Partial') {
-                    const currentAmount = parseFloat(data[index].amount) || 0;
-                    const payAmount = prompt(`Total Due: ${currentAmount}\nEnter Amount Paying Now:`);
-                    const val = parseFloat(payAmount);
-                    
-                    if (val && val > 0 && val < currentAmount) {
-                        const oldAmount = data[index].amount;
-                        data[index].amount = currentAmount - val;
-                        // Log Split
-                        logSystemActivity('edit', 'due', `Partial Pay: ${data[index].name}`, oldAmount, data[index].amount);
-
-                        const historyItem = {
-                            ...data[index],
-                            id: Date.now(), 
-                            amount: val,
-                            status: 'Paid',
-                            paymentDate: new Date().toISOString().split('T')[0],
-                            name: data[index].name + ' (Partial)',
-                            notes: data[index].notes
-                        };
-                        data.push(historyItem);
-                        localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
-                        loadDueData();
-                        return;
-                    } else if (val >= currentAmount) {
-                         data[index].status = 'Paid';
-                         data[index].paymentDate = new Date().toISOString().split('T')[0];
-                         localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
-                         loadDueData();
-                         return;
-                    } else {
-                        loadDueData(); 
-                        return;
-                    }
-                }
-
-                // Log standard Edit
-                const oldVal = data[index][field];
-                if (oldVal != value) { // loose equality
-                     const itemName = data[index].name || data[index].bankName || 'Item';
-                     // Specifically label amount changes
-                     const label = field === 'amount' ? 'Amount' : field;
-                     logSystemActivity('edit', 'due', `Updated ${label} for ${itemName}`, oldVal, value);
-                }
-
-                data[index][field] = value;
-                
-                // Auto-set Payment Date when marked Paid
-                if(field === 'status' && value === 'Paid' && !data[index].paymentDate) {
-                    data[index].paymentDate = new Date().toISOString().split('T')[0];
-                }
-                // Clear Payment Date if NOT Paid
-                if(field === 'status' && (value === 'Pending' || value === 'Urgent')) {
-                    data[index].paymentDate = '';
-                }
-
-                localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
-                loadDueData();
-            }
-        }
-
-        function deleteDueItem(id) {
-            if(!confirm('Delete this item?')) return;
-            const data = getDueData();
-            const itemIndex = data.findIndex(e => e.id === id);
-            if (itemIndex > -1) {
-                const item = data[itemIndex];
-                // Log Delete
-                const itemName = item.name || item.bankName || 'Item';
-                logSystemActivity('delete', 'due', `Deleted: ${itemName}`, null, null, item);
-
-                data.splice(itemIndex, 1);
-                localStorage.setItem(STORAGE_DUE, JSON.stringify(data));
-                loadDueData();
-            }
-        }
-
-        function loadDueData() {
-            const data = getDueData();
-            
-            // Stats Calculation (Always all data)
-            let totalReceive = 0, totalPay = 0, totalBank = 0;
-            data.forEach(item => {
-                const amt = parseFloat(item.amount) || 0;
-                // Include both Pending AND Urgent in totals
-                if (item.type === 'customer' && (item.status === 'Pending' || item.status === 'Urgent')) totalReceive += amt;
-                if (item.type === 'payable' && (item.status === 'Pending' || item.status === 'Urgent')) totalPay += amt;
-                if (item.type === 'bank') totalBank += amt;
-            });
-            
-            const rEl = document.getElementById('due-total-receive'); if(rEl) rEl.textContent = totalReceive.toFixed(3);
-            const pEl = document.getElementById('due-total-pay'); if(pEl) pEl.textContent = totalPay.toFixed(3);
-            const bEl = document.getElementById('due-total-bank'); if(bEl) bEl.textContent = totalBank.toFixed(3);
-            
-            const netBalance = (totalReceive + totalBank) - totalPay;
-            const balEl = document.getElementById('due-total-balance');
-            if(balEl) {
-                balEl.textContent = netBalance.toFixed(3);
-                balEl.className = `text-2xl font-black ${netBalance >= 0 ? 'text-gray-800' : 'text-red-600'}`;
-            }
-
-            // Containers
-            const custContainer = document.getElementById('due-table-customer');
-            const payContainer = document.getElementById('due-table-payable');
-            const bankContainer = document.getElementById('due-table-bank');
-            const historyContainer = document.getElementById('due-table-history');
-            const bankHistoryContainer = document.getElementById('due-table-bank-history');
-            
-            if(custContainer) custContainer.innerHTML = '';
-            if(payContainer) payContainer.innerHTML = '';
-            if(bankContainer) bankContainer.innerHTML = '';
-            if(historyContainer) historyContainer.innerHTML = '';
-            if(bankHistoryContainer) bankHistoryContainer.innerHTML = '';
-
-            // Render Rows based on View Mode
-            // Sort by date desc
-            data.sort((a,b) => new Date(b.date) - new Date(a.date));
-
-            data.forEach(item => {
-                const amt = parseFloat(item.amount) || 0;
-                
-                // ACTIVE VIEW RENDER
-                if (dueViewMode === 'active') {
-                    if (item.type === 'bank') {
-                        // Show recent 5 banks in active
-                        if (bankContainer && bankContainer.childElementCount < 5) {
-                            bankContainer.appendChild(createBankRow(item));
-                        }
-                    } else if (item.status === 'Pending' || item.status === 'Urgent') {
-                        // Show all pending AND urgent
-                        const row = createEditableRow(item);
-                        if (item.type === 'customer' && custContainer) custContainer.appendChild(row);
-                        else if(payContainer) payContainer.appendChild(row);
-                    }
-                }
-
-                // HISTORY VIEW RENDER
-                if (dueViewMode === 'history') {
-                    if (item.type === 'bank' && bankHistoryContainer) {
-                        bankHistoryContainer.appendChild(createBankRow(item));
-                    } else if (item.status === 'Paid' && historyContainer) {
-                        historyContainer.appendChild(createHistoryRow(item));
-                    }
-                }
-            });
-            
-            lucide.createIcons();
-        }
-
-        function createEditableRow(item) {
-            const row = document.createElement('tr');
-            
-            // Conditional HTML for Phone column (Only for Customer)
-            let phoneHtml = '';
-            if (item.type === 'customer') {
-                phoneHtml = `<td><input type="text" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${item.phone || ''}" placeholder="968..." onchange="updateDueItem(${item.id}, 'phone', this.value)"></td>`;
-            }
-
-            // Fix for existing data showing "Name" or "0"
-            const nameVal = item.name === 'Name' ? '' : item.name;
-            const amtVal = (item.amount === 0 || item.amount === '0') ? '' : item.amount;
-            
-            // Notes vs Date logic based on type
-            let dateOrNotes = '';
-            if (item.type === 'customer') {
-                dateOrNotes = `<input type="text" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${item.notes || ''}" placeholder="Notes..." onchange="updateDueItem(${item.id}, 'notes', this.value)">`;
-            } else {
-                dateOrNotes = `<input type="date" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)">`;
-            }
-
-            // Style based on status
-            let statusColor = "text-amber-600 font-medium"; // Default Pending (Yellow/Amber)
-            if(item.status === 'Urgent') statusColor = "text-red-600 font-bold bg-red-50"; 
-            if(item.status === 'Paid') statusColor = "text-green-600 font-bold";
-
-            row.innerHTML = `
-                <td><input type="text" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${nameVal}" placeholder="Name" onchange="updateDueItem(${item.id}, 'name', this.value)"></td>
-                ${phoneHtml}
-                <td><input type="number" step="0.001" class="w-full p-2 border rounded bg-white text-gray-800 text-sm font-mono" value="${amtVal}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
-                <td>${dateOrNotes}</td>
-                <td>
-                    <select class="w-full p-2 border rounded bg-white text-sm ${statusColor}" onchange="updateDueItem(${item.id}, 'status', this.value)">
-                        <option value="Pending" ${item.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                        <option value="Urgent" class="text-red-600 font-bold" ${item.status === 'Urgent' ? 'selected' : ''}>Urgent (ASAP)</option>
-                        <option value="Partial" class="text-blue-600">Partial Pay</option>
-                        <option value="Paid" class="text-green-600 font-bold" ${item.status === 'Paid' ? 'selected' : ''}>Paid</option>
-                    </select>
-                </td>
-                <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-2 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
-            `;
-            return row;
-        }
-
-        function createBankRow(item) {
-            const row = document.createElement('tr');
-            const nameVal = item.bankName === 'Bank Name' ? '' : item.bankName;
-            const amtVal = (item.amount === 0 || item.amount === '0') ? '' : item.amount;
-
-            row.innerHTML = `
-                <td><input type="date" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${item.date}" onchange="updateDueItem(${item.id}, 'date', this.value)"></td>
-                <td><input type="text" class="w-full p-2 border rounded bg-white text-gray-800 text-sm" value="${nameVal}" placeholder="Bank Name" onchange="updateDueItem(${item.id}, 'bankName', this.value)"></td>
-                <td><input type="number" step="0.001" class="w-full p-2 border rounded bg-white text-green-700 font-bold text-sm font-mono" value="${amtVal}" placeholder="0.000" onchange="updateDueItem(${item.id}, 'amount', this.value)"></td>
-                <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-red-500 hover:bg-red-50 p-2 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
-            `;
-            return row;
-        }
-
-        function createHistoryRow(item) {
-            const row = document.createElement('tr');
-            const typeLabel = item.type === 'customer' ? '<span class="text-blue-600 font-bold text-xs">Receive</span>' : '<span class="text-red-600 font-bold text-xs">Payable</span>';
-            const dateValue = item.paymentDate || new Date().toISOString().split('T')[0]; // Default to today if missing
-            
-            // Display phone if available in history
-            let displayDetails = item.name;
-            if (item.type === 'customer' && item.phone) {
-                displayDetails += ` <span class="text-xs text-gray-500">(${item.phone})</span>`;
-            }
-            
-            // Notes logic for history
-            let noteContent = item.type === 'customer' ? (item.notes || '-') : item.date;
-
-            row.innerHTML = `
-                <td class="text-center">${typeLabel}</td>
-                <td class="font-medium text-sm">${displayDetails}</td>
-                <td class="font-mono text-sm">${parseFloat(item.amount).toFixed(3)}</td>
-                <td class="text-xs text-gray-500">${noteContent}</td>
-                <td><input type="date" class="w-full p-2 border rounded bg-gray-50 text-xs" value="${dateValue}" onchange="updateDueItem(${item.id}, 'paymentDate', this.value)"></td>
-                <td>
-                    <select class="w-full p-2 border rounded bg-green-50 text-green-700 text-xs font-bold" onchange="updateDueItem(${item.id}, 'status', this.value)">
-                        <option value="Paid" selected>Paid</option>
-                        <option value="Pending">Revert to Pending</option>
-                    </select>
-                </td>
-                <td class="text-center no-print"><button onclick="deleteDueItem(${item.id})" class="text-gray-400 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button></td>
-            `;
-            return row;
-        }
-
-        // --- NOTES LOGIC ---
-        function loadNotes() {
-            loadGeneralNotes();
-            loadSalamReminders();
-            loadSalamHistory();
-        }
-
-        function getNotes() {
-            return JSON.parse(localStorage.getItem(STORAGE_NOTES) || '[]');
-        }
-
-        function addNote() {
-            const input = document.getElementById('note-input');
-            const text = input.value.trim();
-            if (!text) return;
-            
-            const notes = getNotes();
-            const newItem = { id: Date.now(), text: text, done: false };
-            logSystemActivity('create', 'notes', `Added Note: ${text}`, null, null, newItem);
-
-            notes.push(newItem);
-            localStorage.setItem(STORAGE_NOTES, JSON.stringify(notes));
-            input.value = '';
-            loadGeneralNotes();
-        }
-
-        function deleteNote(id) {
-            const notes = getNotes();
-            const item = notes.find(n => n.id === id);
-            if(item) {
-                logSystemActivity('delete', 'notes', `Deleted Note: ${item.text}`, null, null, item);
-                const newNotes = notes.filter(n => n.id !== id);
-                localStorage.setItem(STORAGE_NOTES, JSON.stringify(newNotes));
-                loadGeneralNotes();
-            }
-        }
-
-        function loadGeneralNotes() {
-            const list = document.getElementById('notes-list');
-            if(!list) return;
-            list.innerHTML = '';
-            const notes = getNotes();
-            
-            notes.forEach(note => {
-                const li = document.createElement('li');
-                li.className = "flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-100";
-                li.innerHTML = `
-                    <span class="text-sm text-gray-700">${note.text}</span>
-                    <button onclick="deleteNote(${note.id})" class="text-red-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                `;
-                list.appendChild(li);
-            });
-            lucide.createIcons();
-        }
-
-        // --- SalamAir Reminders ---
-        function getSalamReminders() {
-            return JSON.parse(localStorage.getItem(STORAGE_SALAM) || '[]');
-        }
-
-        function getSalamHistory() {
-            return JSON.parse(localStorage.getItem(STORAGE_SALAM_HISTORY) || '[]');
-        }
-
-        function addSalamReminder() {
-            const pnr = document.getElementById('salam-pnr').value;
-            const name = document.getElementById('salam-name').value;
-            const date = document.getElementById('salam-date').value;
-            const remark = document.getElementById('salam-remark').value;
-            const editId = document.getElementById('salam-edit-id').value;
-
-            if(!pnr || !name || !date) return alert('All fields required');
-
-            const reminders = getSalamReminders();
-
-            if (editId) {
-                // UPDATE EXISTING
-                const index = reminders.findIndex(r => r.id == editId);
-                if(index > -1) {
-                    reminders[index] = { ...reminders[index], pnr, name, date, remark };
-                }
-                document.getElementById('salam-edit-id').value = '';
-                document.getElementById('btn-salam-add').textContent = "Track Check-in";
-                document.getElementById('btn-salam-add').classList.remove('bg-orange-500', 'hover:bg-orange-600');
-                document.getElementById('btn-salam-add').classList.add('bg-green-600', 'hover:bg-green-700');
-            } else {
-                // ADD NEW
-                const item = { id: Date.now(), pnr, name, date, remark };
-                logSystemActivity('create', 'salam', `Added Check-in: ${name}`, null, null, item);
-                reminders.push(item);
-            }
-            
-            localStorage.setItem(STORAGE_SALAM, JSON.stringify(reminders));
-            
-            // Clear inputs
-            document.getElementById('salam-pnr').value = '';
-            document.getElementById('salam-name').value = '';
-            document.getElementById('salam-date').value = '';
-            document.getElementById('salam-remark').value = '';
-            
-            loadSalamReminders();
-        }
-
-        function editSalamReminder(id) {
-            const reminders = getSalamReminders();
-            const item = reminders.find(r => r.id === id);
-            if(!item) return;
-
-            document.getElementById('salam-pnr').value = item.pnr;
-            document.getElementById('salam-name').value = item.name;
-            document.getElementById('salam-date').value = item.date;
-            document.getElementById('salam-remark').value = item.remark || '';
-            document.getElementById('salam-edit-id').value = item.id;
-
-            const btn = document.getElementById('btn-salam-add');
-            btn.textContent = "Update Reminder";
-            btn.classList.remove('bg-green-600', 'hover:bg-green-700');
-            btn.classList.add('bg-orange-500', 'hover:bg-orange-600');
-        }
-
-        function completeSalamReminder(id) {
-            const reminders = getSalamReminders();
-            const item = reminders.find(r => r.id === id);
-            if (!item) return;
-
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate() + 1);
-            const flightDate = new Date(item.date);
-            flightDate.setHours(0,0,0,0);
-
-            // Strict Check: If flight is > tomorrow, BLOCK
-            if (flightDate > tomorrow) {
-                alert("Cannot complete yet! Check-in only opens 24 hours before flight.");
-                return;
-            }
-
-            // Warning Check: If flight is tomorrow
-            if (flightDate.getTime() === tomorrow.getTime()) {
-                if(!confirm("Flight is tomorrow. Are you sure check-in is open (24h before)?")) return;
-            }
-
-            // Proceed to complete
-            const index = reminders.findIndex(r => r.id === id);
-            if (index > -1) {
-                const history = getSalamHistory();
-                history.push({ ...item, completedDate: new Date().toISOString().split('T')[0] });
-                localStorage.setItem(STORAGE_SALAM_HISTORY, JSON.stringify(history));
-                
-                reminders.splice(index, 1);
-                localStorage.setItem(STORAGE_SALAM, JSON.stringify(reminders));
-                
-                loadSalamReminders();
-                loadSalamHistory();
-            }
-        }
-
-        function deleteSalamReminder(id) {
-            if(!confirm("Delete this reminder? It will be moved to Recycle Bin.")) return;
-            const reminders = getSalamReminders();
-            const item = reminders.find(r => r.id === id);
-            
-            if(item) {
-                logSystemActivity('delete', 'salam', `Deleted Check-in: ${item.name}`, null, null, item);
-                const newReminders = reminders.filter(r => r.id !== id);
-                localStorage.setItem(STORAGE_SALAM, JSON.stringify(newReminders));
-                
-                if(document.getElementById('salam-edit-id').value == id) {
-                     document.getElementById('salam-edit-id').value = '';
-                     document.getElementById('btn-salam-add').textContent = "Track Check-in";
-                     ['salam-pnr','salam-name','salam-date','salam-remark'].forEach(i => document.getElementById(i).value='');
-                }
-                loadSalamReminders();
-            }
-        }
-
-        function deleteSalamHistory(id) {
-            if(!confirm("Delete this history record permanently?")) return;
-            const history = getSalamHistory().filter(r => r.id !== id);
-            localStorage.setItem(STORAGE_SALAM_HISTORY, JSON.stringify(history));
-            loadSalamHistory();
-        }
-
-        function loadSalamReminders() {
-            const tbody = document.getElementById('salam-active-list');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            const reminders = getSalamReminders();
-            
-            // Sort by date (soonest first)
-            reminders.sort((a,b) => new Date(a.date) - new Date(b.date));
-
-            if(reminders.length === 0) {
-                document.getElementById('salam-empty').classList.remove('hidden');
-            } else {
-                document.getElementById('salam-empty').classList.add('hidden');
-                
-                const today = new Date();
-                today.setHours(0,0,0,0);
-                const tomorrow = new Date(today);
-                tomorrow.setDate(today.getDate() + 1);
-
-                reminders.forEach(r => {
-                    const flightDate = new Date(r.date);
-                    flightDate.setHours(0,0,0,0);
-                    
-                    let rowClass = "";
-                    let btnDisabled = false;
-                    let btnClass = "bg-green-600 hover:bg-green-700 text-white";
-
-                    // LOGIC: 
-                    // Red = Today (<24h)
-                    // Yellow = Tomorrow (<48h)
-                    // White = Future (>48h)
-                    
-                    if (flightDate.getTime() === today.getTime()) {
-                        rowClass = "bg-red-50 border-l-4 border-red-500"; 
-                    } else if (flightDate.getTime() === tomorrow.getTime()) {
-                        rowClass = "bg-yellow-50 border-l-4 border-yellow-400";
-                    } else if (flightDate < today) {
-                        rowClass = "bg-gray-200 border-l-4 border-gray-400 opacity-60"; // Past
-                    } else {
-                        // > 48 Hours
-                        btnDisabled = true;
-                        btnClass = "bg-gray-300 text-gray-500 cursor-not-allowed";
-                    }
-
-                    // SAFE DATE FORMATTING APPLIED HERE
-                    const displayDate = formatDateSafe(r.date);
-
-                    const row = document.createElement('tr');
-                    row.className = rowClass;
-                    row.innerHTML = `
-                        <td class="font-mono text-sm">${displayDate}</td>
-                        <td class="font-bold font-mono text-sm">${r.pnr}</td>
-                        <td class="text-sm">${r.name}</td>
-                        <td class="text-sm text-gray-600 italic">${r.remark || '-'}</td>
-                        <td class="text-center flex gap-1 justify-center items-center h-full pt-2">
-                             <button onclick="editSalamReminder(${r.id})" class="text-blue-500 hover:text-blue-700 p-1" title="Edit"><i data-lucide="pencil" class="w-3 h-3"></i></button>
-                             <button onclick="completeSalamReminder(${r.id})" ${btnDisabled ? 'disabled' : ''} class="${btnClass} px-2 py-1 rounded text-xs ml-1" title="Mark Check-in Done">Done</button>
-                             <button onclick="deleteSalamReminder(${r.id})" class="text-gray-400 hover:text-red-500 p-1 ml-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            }
-            lucide.createIcons();
-        }
-
-        function loadSalamHistory() {
-            const tbody = document.getElementById('salam-history-list');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            const history = getSalamHistory();
-            
-            // Sort newest completed first
-            history.sort((a,b) => b.id - a.id);
-
-            history.forEach(r => {
-                const displayDate = formatDateSafe(r.date);
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="text-xs text-gray-500">${displayDate}</td>
-                    <td class="text-xs">${r.pnr}</td>
-                    <td class="text-xs">${r.name}</td>
-                    <td class="text-xs text-gray-400 italic">${r.remark || '-'}</td>
-                    <td class="text-center text-xs text-green-600 font-bold">
-                        Checked-in
-                         <button onclick="deleteSalamHistory(${r.id})" class="ml-2 text-gray-300 hover:text-red-400"><i data-lucide="x" class="w-3 h-3 inline"></i></button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-            lucide.createIcons();
-        }
-
-        function toggleSalamHistory() {
-            const container = document.getElementById('salam-history-container');
-            container.classList.toggle('hidden');
-        }
-        
-        window.addToSalamCheckin = function(id) {
-            event.stopPropagation();
-            const ledger = getHisabData();
-            const item = ledger.find(i => i.id === id);
-            
-            if(!item) return;
-            
-            const pnr = item.pnr;
-            const name = item.name;
-            const date = item.flight_date; // Use flight date for check-in reminder
-            const remark = item.remark || '';
-            
-            if(!pnr || !name || !date) {
-                alert("Cannot add to Check-in: Missing PNR, Name or Flight Date.");
-                return;
-            }
-            
-            const reminders = getSalamReminders();
-            // Optional: Check duplicates
-            // const exists = reminders.some(r => r.pnr === pnr && r.name === name);
-            // if(exists) { alert("Already in check-in list"); return; }
-            
-            const newItem = { id: Date.now(), pnr, name, date, remark };
-            logSystemActivity('create', 'salam', `Added Check-in from Ledger: ${name}`, null, null, newItem);
-
-            reminders.push(newItem);
-            localStorage.setItem(STORAGE_SALAM, JSON.stringify(reminders));
-            
-            alert(`Added ${name} to SalamAir Check-in Tracker!`);
-        };
 
         // --- APP INITIALIZATION ---
         // Run these functions when the script loads to ensure state is correct
