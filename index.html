@@ -1049,67 +1049,6 @@
             lucide.createIcons();
         }
 
-        // --- BACKUP & RESTORE ---
-        function backupData() {
-            const data = {};
-            // predefined keys
-            const keys = [
-                STORAGE_KEY_COUNTER, STORAGE_HISAB, STORAGE_DUE, 
-                STORAGE_EXPENSE, STORAGE_NOTES, STORAGE_SALAM, 
-                STORAGE_SALAM_HISTORY, STORAGE_LOG, STORAGE_TRASH, 'holiday_theme'
-            ];
-            
-            keys.forEach(key => {
-                const val = localStorage.getItem(key);
-                if(val) data[key] = val;
-            });
-
-            // invoice keys (dynamic)
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith(STORAGE_PREFIX)) {
-                    data[key] = localStorage.getItem(key);
-                }
-            }
-
-            const blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `HolidayTravels_Backup_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        function restoreData(input) {
-            const file = input.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    
-                    if (!confirm("This will overwrite current data. Continue?")) {
-                        input.value = ''; // reset input
-                        return;
-                    }
-                    
-                    Object.keys(data).forEach(key => {
-                        localStorage.setItem(key, data[key]);
-                    });
-                    
-                    alert("Restore Successful! Reloading...");
-                    location.reload();
-                } catch (err) {
-                    alert("Error restoring data: " + err.message);
-                    console.error(err);
-                }
-            };
-            reader.readAsText(file);
-        }
-
         // --- INVOICE LOGIC ---
         const invoiceNumberElement = document.getElementById('invoice-number');
         
@@ -2366,39 +2305,45 @@
         };
 
         // --- BACKUP & RESTORE ---
-        function backupData() {
-            const data = {};
-            // predefined keys
-            const keys = [
-                STORAGE_KEY_COUNTER, STORAGE_HISAB, STORAGE_DUE, 
-                STORAGE_EXPENSE, STORAGE_NOTES, STORAGE_SALAM, 
-                STORAGE_SALAM_HISTORY, STORAGE_LOG, STORAGE_TRASH, 'holiday_theme'
-            ];
-            
-            keys.forEach(key => {
-                const val = localStorage.getItem(key);
-                if(val) data[key] = val;
-            });
+        window.backupData = function() {
+            try {
+                const data = {};
+                // predefined keys
+                const keys = [
+                    STORAGE_KEY_COUNTER, STORAGE_HISAB, STORAGE_DUE, 
+                    STORAGE_EXPENSE, STORAGE_NOTES, STORAGE_SALAM, 
+                    STORAGE_SALAM_HISTORY, STORAGE_LOG, STORAGE_TRASH, 'holiday_theme'
+                ];
+                
+                keys.forEach(key => {
+                    const val = localStorage.getItem(key);
+                    if(val) data[key] = val;
+                });
 
-            // invoice keys (dynamic)
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith(STORAGE_PREFIX)) {
-                    data[key] = localStorage.getItem(key);
+                // invoice keys (dynamic)
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith(STORAGE_PREFIX)) {
+                        data[key] = localStorage.getItem(key);
+                    }
                 }
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `HolidayTravels_Backup_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+            } catch(e) {
+                alert("Backup Error: " + e.message);
+                console.error("Backup failed", e);
             }
+        };
 
-            const blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `HolidayTravels_Backup_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        function restoreData(input) {
+        window.restoreData = function(input) {
             const file = input.files[0];
             if (!file) return;
             
@@ -2424,7 +2369,7 @@
                 }
             };
             reader.readAsText(file);
-        }
+        };
 
         // --- DASHBOARD UPDATE LOGIC (RESTORED) ---
         function updateDashboard() {
